@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
 import 'package:snap_check/screens/login_screen.dart';
+import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
 import 'package:snap_check/screens/splash_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => SignupScreen(),
         '/forgot': (context) => ForgotPasswordScreen(),
         '/home': (context) => HomeScreen(title: "Welcome Guest"),
+        '/settings': (context) => SettingsScreen(),
       },
     );
   }

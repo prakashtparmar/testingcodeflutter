@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snap_check/screens/setting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -12,25 +13,44 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
+    int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 4 : 3;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.title,
-        ), // Accessing the title from the StatefulWidget
+        title: Text(widget.title),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: GestureDetector(
+              onTap: () {
+                _showSnackBar(context, "User icon tapped");
+              },
+              child: CircleAvatar(
+                backgroundColor: Colors.grey.shade300,
+                child: Icon(Icons.person, color: Colors.black87),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           // Wrap the Column in SingleChildScrollView
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Welcome to the Home Screen",
-                  style: Theme.of(context).textTheme.displayLarge,
-                ),
-                const SizedBox(height: 16),
                 Text(
                   "Select an option below to proceed",
                   style: Theme.of(context).textTheme.bodyLarge,
@@ -42,15 +62,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       true, // Ensures the GridView only takes as much space as it needs
                   physics:
                       NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
-                  crossAxisCount: 3, // Now using 3 columns
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                   childAspectRatio: 1, // Equal size for each grid item
                   children: [
                     _buildGridItem(
                       context,
-                      icon: Icons.account_circle_outlined,
-                      title: "Profile",
+                      icon: Icons.calendar_view_day,
+                      title: "Day Logs",
                       onTap: () {
                         _showSnackBar(context, "Profile tapped");
                       },
@@ -107,9 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Function to show SnackBar
   void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildGridItem(
@@ -124,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: Theme.of(context).cardColor,
@@ -133,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 40, color: Theme.of(context).primaryColor),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall,
