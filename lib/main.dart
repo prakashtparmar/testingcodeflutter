@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:snap_check/screens/add_day_log_screen.dart';
+import 'package:snap_check/screens/day_log_list_screen.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
 import 'package:snap_check/screens/login_screen.dart';
@@ -32,6 +34,8 @@ class MyApp extends StatelessWidget {
         '/forgot': (context) => ForgotPasswordScreen(),
         '/home': (context) => HomeScreen(title: "Welcome Guest"),
         '/settings': (context) => SettingsScreen(),
+        '/dayLogs': (context) => DayLogsListScreen(),
+        '/addDayLog': (context) => AddDayLogScreen(),
       },
     );
   }

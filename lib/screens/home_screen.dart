@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -49,11 +50,12 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   "Select an option below to proceed",
                   style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
                 // Using shrinkWrap and setting the GridView to take only available space
@@ -69,50 +71,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildGridItem(
                       context,
-                      icon: Icons.calendar_view_day,
+                      icon: AppAssets.dayLogs,
                       title: "Day Logs",
                       onTap: () {
-                        _showSnackBar(context, "Profile tapped");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: Icons.settings_outlined,
-                      title: "Settings",
-                      onTap: () {
-                        _showSnackBar(context, "Settings tapped");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: Icons.notifications_outlined,
-                      title: "Notifications",
-                      onTap: () {
-                        _showSnackBar(context, "Notifications tapped");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: Icons.help_outline,
-                      title: "Help",
-                      onTap: () {
-                        _showSnackBar(context, "Help tapped");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: Icons.info_outline,
-                      title: "About",
-                      onTap: () {
-                        _showSnackBar(context, "About tapped");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: Icons.feedback_outlined,
-                      title: "Feedback",
-                      onTap: () {
-                        _showSnackBar(context, "Feedback tapped");
+                        _navigationRoutes(context, "/dayLogs");
                       },
                     ),
                   ],
@@ -132,9 +94,14 @@ class _HomeScreenState extends State<HomeScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  // Function to show SnackBar
+  void _navigationRoutes(BuildContext context, String routeName) {
+    Navigator.pushNamed(context, routeName);
+  }
+
   Widget _buildGridItem(
     BuildContext context, {
-    required IconData icon,
+    required String icon,
     required String title,
     required VoidCallback onTap,
   }) {
@@ -142,17 +109,17 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       child: Card(
         elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          // padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(6),
             color: Theme.of(context).cardColor,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Theme.of(context).primaryColor),
+              Image.asset(icon, width: 50, height: 50),
               const SizedBox(height: 4),
               Text(
                 title,

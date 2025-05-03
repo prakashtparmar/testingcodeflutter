@@ -3,19 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:snap_check/models/login_response_model.dart';
 import 'package:snap_check/models/user_model.dart';
-import 'package:snap_check/screens/login_screen.dart';
+import 'package:snap_check/services/service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
-class AuthService {
-  final String baseUrl =
-      'http://localhost:8000/api'; // Replace with your backend URL
-
+class AuthService extends Service {
   Future<LoginResponseModel?> signInWithEmailPassword(
     String email,
     String password,
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/login'),
+      Uri.parse(apiLogin),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -29,7 +26,7 @@ class AuthService {
 
   Future<User?> registerWithEmailPassword(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/register'),
+      Uri.parse(apiRegister),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -43,7 +40,7 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/reset-password'),
+      Uri.parse(apiResetPassword),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
     );
@@ -53,12 +50,12 @@ class AuthService {
     }
   }
 
-  Future<void> signOut(String token) async {
+  Future<bool> signOut(String token) async {
     // For stateless REST APIs, sign out is often just deleting token locally
     // Implement as needed
     debugPrint(token);
     final response = await http.post(
-      Uri.parse('$baseUrl/logout'),
+      Uri.parse(apiLogout),
       headers: {
         'Content-Type': 'application/json',
         "Authorization": "Bearer $token",
@@ -67,8 +64,9 @@ class AuthService {
 
     if (response.statusCode == 200) {
       SharedPrefHelper.clearUser();
+      return true;
     } else {
-      throw Exception(response.body);
+      return false;
     }
   }
 
