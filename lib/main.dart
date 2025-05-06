@@ -7,6 +7,7 @@ import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
 import 'package:snap_check/screens/splash_screen.dart';
+import 'package:snap_check/screens/user_detail_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
 
 void main() {
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => SettingsScreen(),
         '/dayLogs': (context) => DayLogsListScreen(),
         '/addDayLog': (context) => AddDayLogScreen(),
+        '/userDetail': (context) => UserDetailScreen(),
       },
     );
   }

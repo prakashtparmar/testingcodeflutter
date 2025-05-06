@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/tour_details_response_model.dart';
@@ -19,6 +20,7 @@ class BasicService extends Service {
   }
 
   Future<DayLogResponseModel?> getDayLogs(String token) async {
+    debugPrint(apiDayLogs);
     final response = await http.get(
       Uri.parse(apiDayLogs),
       headers: {

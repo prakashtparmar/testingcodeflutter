@@ -17,17 +17,23 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
   List<DayLogsDataModel> filteredLogs = [];
   final TextEditingController _searchController = TextEditingController();
   bool isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_filterLogs);
-    _loadUser();
-    _fetchDayLogs();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadUser();
+    await _fetchDayLogs();
   }
 
   Future<void> _loadUser() async {
     final tokenData = await SharedPrefHelper.getToken();
+    debugPrint(tokenData);
     setState(() {
       _token = tokenData ?? "";
     });
@@ -37,27 +43,20 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
     try {
       final response = await _service.getDayLogs(_token!);
 
-      if (response != null && response.data!.data!.isNotEmpty) {
-        setState(() {
-          dayLogs = response.data?.data ?? [];
-          filteredLogs = List.from(dayLogs);
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
       setState(() {
+        if (response != null && response.data != null) {
+          dayLogs = response.data!.data!;
+          filteredLogs = List.from(dayLogs);
+        } else {
+          _errorMessage = "No logs found.";
+        }
         isLoading = false;
       });
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading logs: $e')));
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Error loading logs: $e";
+        isLoading = false;
+      });
     }
   }
 
@@ -77,8 +76,20 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
     super.dispose();
   }
 
+  void _navigationRoutes(BuildContext context, String routeName) {
+    Navigator.pushNamed(context, routeName);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        _errorMessage = null;
+      });
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Day Logs')),
       body: SafeArea(
@@ -115,7 +126,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushNamed(context, "addDayLog");
+          _navigationRoutes(context, "/addDayLog");
         },
         child: const Icon(Icons.add),
       ),

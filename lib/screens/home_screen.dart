@@ -24,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: GestureDetector(
               onTap: () {
-                _showSnackBar(context, "User icon tapped");
+                _navigationRoutes(context, "/userDetail");
               },
               child: CircleAvatar(
                 backgroundColor: Colors.grey.shade300,

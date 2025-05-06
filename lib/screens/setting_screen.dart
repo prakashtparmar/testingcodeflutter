@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/models/user_model.dart';
+import 'package:snap_check/services/auth_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -58,6 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUser() async {
     final userData = await SharedPrefHelper.loadUser();
     final tokenData = await SharedPrefHelper.getToken();
+    debugPrint(tokenData);
     setState(() {
       _user = userData;
       _token = tokenData ?? "";
@@ -180,14 +182,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true) {
-      // if (_token != null && _token!.isNotEmpty) {
-      //   // setState(() => _isLoading = true);
-      //   var result = await AuthService().signOut(
-      //     _token ?? "",
-      //   ); // Call your logout logic
-      //   debugPrint("result $result");
-      //   // setState(() => _isLoading = false);
-      // }
+      if (_token != null && _token!.isNotEmpty) {
+        setState(() => _isLoading = true);
+        var result = await AuthService().signOut(
+          _token ?? "",
+        ); // Call your logout logic
+        debugPrint("result $result");
+        setState(() => _isLoading = false);
+      }
       SharedPrefHelper.clearUser();
       if (context.mounted) {
         Navigator.pushReplacementNamed(context, '/login');

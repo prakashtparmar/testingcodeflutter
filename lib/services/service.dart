@@ -6,7 +6,8 @@ class Service {
       apiResetPassword,
       apiLogout,
       apiTourDetails,
-      apiDayLogs;
+      apiDayLogs,
+      apiUserDetail;
 
   // Constructor to initialize apiLogin
   Service() {
@@ -16,5 +17,6 @@ class Service {
     apiLogout = "$baseUrl/logout"; // Proper URL concatenation
     apiTourDetails = "$baseUrl/tourDetails"; // Proper URL concatenation
     apiDayLogs = "$baseUrl/dayLogs"; // Proper URL concatenation
+    apiUserDetail = "$baseUrl/userDetail"; // Proper URL concatenation
   }
 }
