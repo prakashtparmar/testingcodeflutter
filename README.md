@@ -1,16 +1,49 @@
-# snap_check
+# 📸 Snap Check Flutter
 
-A new Flutter project.
+A Flutter-based application for photo capturing and checking functionality.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🖥 Run on Windows (Step-by-Step)
 
-A few resources to get you started if this is your first Flutter project:
+This guide helps you run the Snap Check Flutter app on a **Windows PC**.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## ✅ Prerequisites
+
+Make sure the following are installed:
+
+### 1. [Flutter SDK](https://docs.flutter.dev/get-started/install/windows)
+- Extract to: `C:\flutter` (recommended)
+- Add `C:\flutter\bin` to your system PATH
+
+### 2. [Git for Windows](https://git-scm.com/download/win)
+
+### 3. [Visual Studio 2022+ (NOT VS Code)](https://visualstudio.microsoft.com/)
+- Required for desktop apps (Windows)
+- During installation, select:
+  - ✅ Desktop development with C++
+
+---
+
+## 🛠 Setup Instructions
+
+### 1. Clone the Repo
+
+```
+git clone https://github.com/bhavinparghi007/snap_check_flutter.git
+cd snap_check_flutter
+```
+
+### 2. Install Dependencies
+
+```
+flutter pub get
+```
+
+### 2. Run app
+
+```
+flutter run
+```
