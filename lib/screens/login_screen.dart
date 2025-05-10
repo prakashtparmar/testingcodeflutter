@@ -66,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
+      debugPrint(e.toString());
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
