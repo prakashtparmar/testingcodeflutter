@@ -59,7 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUser() async {
     final userData = await SharedPrefHelper.loadUser();
     final tokenData = await SharedPrefHelper.getToken();
-    debugPrint(tokenData);
+
     setState(() {
       _user = userData;
       _token = tokenData ?? "";

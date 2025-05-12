@@ -52,8 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (loginResponseModel != null) {
         if (loginResponseModel.success) {
-          SharedPrefHelper.saveToken(loginResponseModel.data!.token);
-          SharedPrefHelper.saveUser(loginResponseModel.data!.user);
+          SharedPrefHelper.saveToken(loginResponseModel.data!.token!);
+          SharedPrefHelper.saveUser(loginResponseModel.data!.user!);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => HomeScreen(title: "")),

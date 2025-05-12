@@ -17,12 +17,8 @@ class AuthService extends Service {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-
-    if (response.statusCode == 200) {
-      return LoginResponseModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(response.body);
-    }
+    debugPrint(response.body);
+    return LoginResponseModel.fromJson(jsonDecode(response.body));
   }
 
   Future<User?> registerWithEmailPassword(String email, String password) async {

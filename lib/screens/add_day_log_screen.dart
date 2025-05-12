@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/services/share_pref.dart';
 
 class AddDayLogScreen extends StatefulWidget {
   const AddDayLogScreen({super.key});
@@ -23,12 +25,13 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   List<TourDetails> tourPurposes = [];
   List<TourDetails> vehicleTypes = [];
   List<TourDetails> tourTypes = [];
-  List<String> parties = [];
+  List<PartyUsersDataModel> parties = [];
+  String? _token;
 
-  String? selectedPurpose;
-  String? selectedVehicle;
-  String? selectedTourType;
-  String? selectedParty;
+  TourDetails? selectedPurpose;
+  TourDetails? selectedVehicle;
+  TourDetails? selectedTourType;
+  PartyUsersDataModel? selectedParty;
   String? placeVisited;
   String? openingKm;
   XFile? imageFile;
@@ -37,6 +40,15 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final tokenData = await SharedPrefHelper.getToken();
+
+    setState(() {
+      _token = tokenData ?? "";
+    });
     _fetchTourDetails();
   }
 
@@ -49,6 +61,26 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           vehicleTypes = response.data!.vehicleTypes!;
           tourTypes = response.data!.tourTypes!;
           parties = [];
+        });
+        _fetchPartyUsers();
+      }
+    } catch (e) {
+      debugPrint('Error fetching tour details: $e');
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load tour details')));
+    }
+  }
+
+  Future<void> _fetchPartyUsers() async {
+    try {
+      final response = await _basicService.getPartyUsers(_token!);
+      if (response != null && response.data != null) {
+        setState(() {
+          parties = response.data!;
         });
       }
     } catch (e) {
@@ -104,7 +136,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                 }),
                 const SizedBox(height: 12),
 
-                if (purposesWithParties.contains(selectedPurpose))
+                if (purposesWithParties.contains(selectedPurpose!.name))
                   _buildStringDropdownField(
                     'Select Party',
                     parties,
@@ -113,7 +145,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                       setState(() => selectedParty = val);
                     },
                   ),
-                if (purposesWithParties.contains(selectedPurpose))
+                if (purposesWithParties.contains(selectedPurpose!.name))
                   const SizedBox(height: 12),
 
                 TextFormField(
@@ -154,8 +186,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                       child: InkWell(
                         onTap: _pickImage,
                         child: Container(
-                          height: 56,
-                          width: 56,
+                          height: 50,
+                          width: 50,
                           decoration: BoxDecoration(
                             color: Theme.of(context).primaryColor,
                             borderRadius: BorderRadius.circular(8),
@@ -192,10 +224,10 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   Widget _buildDropdownField(
     String label,
     List<TourDetails> items,
-    String? selected,
-    ValueChanged<String?> onChanged,
+    TourDetails? selected,
+    ValueChanged<TourDetails?> onChanged,
   ) {
-    return DropdownButtonFormField<String>(
+    return DropdownButtonFormField<TourDetails>(
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(),
@@ -204,8 +236,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       items:
           items
               .map(
-                (e) => DropdownMenuItem<String>(
-                  value: e.name, // or e.id, based on your logic
+                (e) => DropdownMenuItem<TourDetails>(
+                  value: e, // or e.id, based on your logic
                   child: Text(e.name!),
                 ),
               )
@@ -217,11 +249,11 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
 
   Widget _buildStringDropdownField(
     String label,
-    List<String> items,
-    String? selected,
-    ValueChanged<String?> onChanged,
+    List<PartyUsersDataModel> items,
+    PartyUsersDataModel? selected,
+    ValueChanged<PartyUsersDataModel?> onChanged,
   ) {
-    return DropdownButtonFormField<String>(
+    return DropdownButtonFormField<PartyUsersDataModel>(
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(),
@@ -230,9 +262,9 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       items:
           items
               .map(
-                (e) => DropdownMenuItem<String>(
+                (e) => DropdownMenuItem<PartyUsersDataModel>(
                   value: e, // or e.id, based on your logic
-                  child: Text(e),
+                  child: Text(e.name!),
                 ),
               )
               .toList(),
