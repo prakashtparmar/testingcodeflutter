@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/models/day_logs_data_model.dart';
+import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
@@ -81,6 +82,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     if (_errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -90,6 +92,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
         _errorMessage = null;
       });
     }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Day Logs')),
       body: SafeArea(
@@ -112,12 +115,16 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                   : Expanded(
-                    child: ListView.separated(
-                      itemCount: filteredLogs.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder:
-                          (context, index) =>
-                              _buildLogTile(filteredLogs[index]),
+                    child: RefreshIndicator(
+                      onRefresh: _fetchDayLogs,
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: filteredLogs.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder:
+                            (context, index) =>
+                                _buildLogTile(filteredLogs[index]),
+                      ),
                     ),
                   ),
             ],
@@ -135,26 +142,58 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
   Widget _buildLogTile(DayLogsDataModel log) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.work_outline, color: Colors.blueAccent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    log.tourPurpose?.name ?? 'No purpose',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.place, size: 12, color: Colors.grey),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    log.placeVisit ?? 'No place',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            if (log.closingKm == null)
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Navigate to tracking screen or perform tracking
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LiveMapScreen(logId: log.id!),
+                    ),
+                  );
+                },
+
+                label: Text(
+                  "Track",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+          ],
         ),
-        leading: const Icon(
-          Icons.calendar_today_outlined,
-          color: Colors.blueAccent,
-        ),
-        title: Text(
-          log.placeVisit!,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        onTap: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Tapped: $log')));
-        },
       ),
     );
   }

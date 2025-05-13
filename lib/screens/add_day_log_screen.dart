@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
+import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/basic_service.dart';
@@ -61,6 +62,9 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           vehicleTypes = response.data!.vehicleTypes!;
           tourTypes = response.data!.tourTypes!;
           parties = [];
+          selectedPurpose = response.data!.tourPurposes!.first;
+          selectedVehicle = response.data!.vehicleTypes!.first;
+          selectedTourType = response.data!.tourTypes!.first;
         });
         _fetchPartyUsers();
       }
@@ -136,7 +140,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                 }),
                 const SizedBox(height: 12),
 
-                if (purposesWithParties.contains(selectedPurpose!.name))
+                if (selectedPurpose != null &&
+                    purposesWithParties.contains(selectedPurpose!.name))
                   _buildStringDropdownField(
                     'Select Party',
                     parties,
@@ -145,7 +150,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                       setState(() => selectedParty = val);
                     },
                   ),
-                if (purposesWithParties.contains(selectedPurpose!.name))
+                if (selectedPurpose != null &&
+                    purposesWithParties.contains(selectedPurpose!.name))
                   const SizedBox(height: 12),
 
                 TextFormField(
@@ -281,7 +287,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     }
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState?.validate() != true || imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -290,9 +296,43 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const LiveMapScreen()),
-    );
+    // Base form data
+    final Map<String, String> formData = {
+      "tour_purpose": selectedPurpose!.id.toString(),
+      "vehicle_type": selectedVehicle!.id.toString(),
+      "tour_type": selectedTourType!.id.toString(),
+      "place_visit": placeVisited!,
+      "opening_km": openingKm!,
+    };
+    // If the selected purpose's name is in the list, include party_id
+    if (selectedPurpose != null &&
+        purposesWithParties.contains(selectedPurpose!.name)) {
+      formData["party_id"] =
+          selectedParty!.id.toString(); // assumes `selectedParty` is defined
+    }
+    PostDayLogsResponseModel? postDayLogsResponseModel = await _basicService
+        .postDayLog(_token!, imageFile, formData);
+    if (postDayLogsResponseModel != null &&
+        postDayLogsResponseModel.success == true) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => LiveMapScreen(logId: postDayLogsResponseModel.data!.id!),
+        ),
+      );
+    } else if (postDayLogsResponseModel != null &&
+        postDayLogsResponseModel.success == false) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(postDayLogsResponseModel.message!)),
+      );
+    }
   }
 }

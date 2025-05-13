@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:snap_check/models/day_log_detail_data_model.dart';
+import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/services/share_pref.dart';
 
 class LiveMapScreen extends StatefulWidget {
-  const LiveMapScreen({super.key});
+  final int logId;
+
+  const LiveMapScreen({super.key, required this.logId});
 
   @override
   State<LiveMapScreen> createState() => _LiveMapScreenState();
@@ -19,11 +24,31 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   String? closingKm;
   LatLng? currentPosition;
   final _formKey = GlobalKey<FormState>();
+  DayLogDetailDataModel? dayLogDetailModel;
+  String? _token;
 
   @override
   void initState() {
     super.initState();
+    _fetchDayLogDetail();
     _startTracking();
+  }
+
+  Future<void> _fetchDayLogDetail() async {
+    final tokenData = await SharedPrefHelper.getToken();
+    final logDetail = await BasicService().getDayLogDetail(
+      tokenData!,
+      widget.logId,
+    );
+
+    if (logDetail != null) {
+      // Use the logDetail data here (e.g., setState to update UI)
+      debugPrint(logDetail.data?.placeVisit);
+      setState(() {
+        _token = tokenData;
+        dayLogDetailModel = logDetail.data;
+      });
+    }
   }
 
   void _startTracking() async {
@@ -41,7 +66,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         currentPosition = latLng;
         _routePoints.add(latLng);
       });
-      _mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
+
+      // Update map's camera position with new location
+      if (_mapController != null && currentPosition != null) {
+        _mapController?.animateCamera(CameraUpdate.newLatLng(currentPosition!));
+      }
     });
   }
 
