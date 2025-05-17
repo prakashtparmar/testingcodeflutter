@@ -8,7 +8,9 @@ class Service {
       apiTourDetails,
       apiDayLogs,
       apiUserDetail,
-      apiPartyUsers;
+      apiPartyUsers,
+      apiDayLogStoreLocations,
+      apiDayLogCloseDayLog;
 
   // Constructor to initialize apiLogin
   Service() {
@@ -20,5 +22,9 @@ class Service {
     apiDayLogs = "$baseUrl/dayLogs"; // Proper URL concatenation
     apiUserDetail = "$baseUrl/userDetail"; // Proper URL concatenation
     apiPartyUsers = "$baseUrl/partyUsers"; // Proper URL concatenation
+    apiDayLogStoreLocations =
+        "$baseUrl/dayLogs/storeLocations"; // Proper URL concatenation
+    apiDayLogCloseDayLog =
+        "$baseUrl/dayLogs/closeDayLog"; // Proper URL concatenation
   }
 }

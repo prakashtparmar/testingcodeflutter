@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
+import 'package:snap_check/models/day_log_store_locations_response_model.dart';
 import 'package:snap_check/models/party_user_response_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details_response_model.dart';
@@ -94,5 +95,49 @@ class BasicService extends Service {
     );
 
     return DayLogDetailResponseModel.fromJson(jsonDecode(response.body));
+  }
+
+  Future<DayLogStoreLocationResponseModel?> postDayLogLocations(
+    String token,
+    Map<String, Object> body,
+  ) async {
+    final response = await http.post(
+      Uri.parse(apiDayLogStoreLocations),
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    return DayLogStoreLocationResponseModel.fromJson(jsonDecode(response.body));
+  }
+
+  Future<PostDayLogsResponseModel?> postCloseDay(
+    String token,
+    XFile? imageFile,
+    Map<String, String> fields,
+  ) async {
+    final uri = Uri.parse(apiDayLogCloseDayLog);
+    final request = http.MultipartRequest('POST', uri);
+    // Set headers (note: Content-Type will be set automatically)
+    request.headers.addAll({"Authorization": "Bearer $token"});
+    // Add text fields (like date, place, km, etc.)
+    request.fields.addAll(fields);
+    // Add image file (optional)
+    if (imageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'closing_km_image', // key expected by your backend
+          imageFile.path,
+          filename: basename(imageFile.path),
+        ),
+      );
+    }
+    // Send the request
+    final response = await request.send();
+    final responseString = await response.stream.bytesToString();
+
+    return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
   }
 }
