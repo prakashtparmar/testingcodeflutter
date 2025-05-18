@@ -57,6 +57,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
+                // Full-width Check-In Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: Icon(Icons.add_location_alt_outlined),
+                    label: Text("Check In / Add Day Log"),
+                    onPressed: () {
+                      _navigationRoutes(
+                        context,
+                        "/addDayLog",
+                      ); // Make sure this route is defined
+                    },
+                  ),
+                ),
+
                 const SizedBox(height: 32),
                 // Using shrinkWrap and setting the GridView to take only available space
                 GridView.count(
