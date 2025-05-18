@@ -3,9 +3,7 @@ import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String title;
-
-  const HomeScreen({super.key, required this.title});
+  const HomeScreen({super.key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -18,7 +16,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -60,14 +57,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Full-width Check-In Button
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    icon: Icon(Icons.add_location_alt_outlined),
+                  child: ElevatedButton.icon(
+                    icon: Icon(Icons.check_circle_rounded),
                     label: Text("Check In / Add Day Log"),
                     onPressed: () {
-                      _navigationRoutes(
-                        context,
-                        "/addDayLog",
-                      ); // Make sure this route is defined
+                      _navigationRoutes(context, "/addDayLog");
                     },
                   ),
                 ),

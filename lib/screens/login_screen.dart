@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SharedPrefHelper.saveUser(loginResponseModel.data!.user!);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => HomeScreen(title: "")),
+            MaterialPageRoute(builder: (_) => HomeScreen()),
           );
         } else {
           if (!mounted) return;

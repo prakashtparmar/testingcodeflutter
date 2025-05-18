@@ -6,6 +6,8 @@ import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AddDayLogScreen extends StatefulWidget {
   const AddDayLogScreen({super.key});
@@ -36,7 +38,10 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   String? placeVisited;
   String? openingKm;
   XFile? imageFile;
-
+  String? notes;
+  Position? currentPosition;
+  GoogleMapController? mapController;
+  bool _isLoading = true;
   final _formKey = GlobalKey<FormState>();
   @override
   void initState() {
@@ -51,10 +56,12 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       _token = tokenData ?? "";
     });
     _fetchTourDetails();
+    _getCurrentLocation();
   }
 
   Future<void> _fetchTourDetails() async {
     try {
+      setState(() => _isLoading = true);
       final response = await _basicService.getTourDetails();
       if (response != null && response.data != null) {
         setState(() {
@@ -70,12 +77,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching tour details: $e');
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load tour details')));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -92,10 +95,53 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load tour details')));
     }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Location services are disabled. Please enable the services',
+          ),
+        ),
+      );
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permissions are denied')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Location permissions are permanently denied, we cannot request permissions.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    setState(() {
+      currentPosition = position;
+    });
   }
 
   @override
@@ -105,123 +151,174 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDropdownField(
-                  'Tour Purpose',
-                  tourPurposes,
-                  selectedPurpose,
-                  (val) {
-                    setState(() {
-                      selectedPurpose = val;
-                      selectedParty = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                _buildDropdownField(
-                  'Vehicle Type',
-                  vehicleTypes,
-                  selectedVehicle,
-                  (val) {
-                    setState(() => selectedVehicle = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                _buildDropdownField('Tour Type', tourTypes, selectedTourType, (
-                  val,
-                ) {
-                  setState(() => selectedTourType = val);
-                }),
-                const SizedBox(height: 12),
-
-                if (selectedPurpose != null &&
-                    purposesWithParties.contains(selectedPurpose!.name))
-                  _buildStringDropdownField(
-                    'Select Party',
-                    parties,
-                    selectedParty,
-                    (val) {
-                      setState(() => selectedParty = val);
-                    },
-                  ),
-                if (selectedPurpose != null &&
-                    purposesWithParties.contains(selectedPurpose!.name))
-                  const SizedBox(height: 12),
-
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Place Visited',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (val) => placeVisited = val,
-                  validator:
-                      (val) =>
-                          val == null || val.isEmpty
-                              ? 'Enter place visited'
-                              : null,
-                ),
-                const SizedBox(height: 12),
-
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Opening K.M.',
-                          border: OutlineInputBorder(),
+          child:
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDropdownField(
+                          'Tour Purpose',
+                          tourPurposes,
+                          selectedPurpose,
+                          (val) {
+                            setState(() {
+                              selectedPurpose = val;
+                              selectedParty = null;
+                            });
+                          },
                         ),
-                        keyboardType: TextInputType.number,
-                        onChanged: (val) => openingKm = val,
-                        validator:
-                            (val) =>
-                                val == null || val.isEmpty
-                                    ? 'Enter opening KM'
-                                    : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: InkWell(
-                        onTap: _pickImage,
-                        child: Container(
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 12),
+
+                        _buildDropdownField(
+                          'Vehicle Type',
+                          vehicleTypes,
+                          selectedVehicle,
+                          (val) {
+                            setState(() => selectedVehicle = val);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+
+                        _buildDropdownField(
+                          'Tour Type',
+                          tourTypes,
+                          selectedTourType,
+                          (val) {
+                            setState(() => selectedTourType = val);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+
+                        if (selectedPurpose != null &&
+                            purposesWithParties.contains(selectedPurpose!.name))
+                          _buildStringDropdownField(
+                            'Select Party',
+                            parties,
+                            selectedParty,
+                            (val) {
+                              setState(() => selectedParty = val);
+                            },
                           ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
+                        if (selectedPurpose != null &&
+                            purposesWithParties.contains(selectedPurpose!.name))
+                          const SizedBox(height: 12),
+
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Place Visited',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (val) => placeVisited = val,
+                          validator:
+                              (val) =>
+                                  val == null || val.isEmpty
+                                      ? 'Enter place visited'
+                                      : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Opening K.M.',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) => openingKm = val,
+                                validator:
+                                    (val) =>
+                                        val == null || val.isEmpty
+                                            ? 'Enter opening KM'
+                                            : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: InkWell(
+                                onTap: _pickImage,
+                                child: Container(
+                                  height: 50,
+                                  width: 50,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Notes field
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Notes',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                          onChanged: (val) => notes = val,
+                          validator:
+                              (val) =>
+                                  val == null || val.isEmpty
+                                      ? 'Enter notes'
+                                      : null,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Show Google Map preview with marker if currentPosition is not null
+                        if (currentPosition != null)
+                          SizedBox(
+                            height: 200,
+                            child: GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(
+                                  currentPosition!.latitude,
+                                  currentPosition!.longitude,
+                                ),
+                                zoom: 15,
+                              ),
+                              markers: {
+                                Marker(
+                                  markerId: const MarkerId('currentLocation'),
+                                  position: LatLng(
+                                    currentPosition!.latitude,
+                                    currentPosition!.longitude,
+                                  ),
+                                ),
+                              },
+                              onMapCreated: (controller) {
+                                mapController = controller;
+                              },
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: true,
+                              zoomControlsEnabled: false,
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            child: const Text('Submit & Start'),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    if (imageFile != null)
-                      const Icon(Icons.check_circle, color: Colors.green),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _submitForm,
-                    child: const Text('Submit & Start'),
                   ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -303,6 +400,9 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       "tour_type": selectedTourType!.id.toString(),
       "place_visit": placeVisited!,
       "opening_km": openingKm!,
+      "note": notes!,
+      "opening_km_latitude": currentPosition!.latitude.toString(),
+      "opening_km_longitude": currentPosition!.longitude.toString(),
     };
     // If the selected purpose's name is in the list, include party_id
     if (selectedPurpose != null &&

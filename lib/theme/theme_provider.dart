@@ -32,6 +32,10 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color:
+          primaryColor, // Or use trackedColor/notTrackedColor based on context
+    ),
     textTheme: GoogleFonts.poppinsTextTheme(),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -65,10 +69,15 @@ class AppTheme {
         textStyle: GoogleFonts.poppins(
           fontWeight: FontWeight.w600,
           fontSize: 16,
+          color: Colors.white,
         ),
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color:
+          primaryColor, // Or use trackedColor/notTrackedColor based on context
     ),
     textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
     inputDecorationTheme: InputDecorationTheme(

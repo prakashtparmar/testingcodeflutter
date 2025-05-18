@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignupScreen(),
         '/forgot': (context) => ForgotPasswordScreen(),
-        '/home': (context) => HomeScreen(title: "Welcome Guest"),
+        '/home': (context) => HomeScreen(),
         '/settings': (context) => SettingsScreen(),
         '/dayLogs': (context) => DayLogsListScreen(),
         '/addDayLog': (context) => AddDayLogScreen(),

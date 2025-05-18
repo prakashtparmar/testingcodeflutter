@@ -34,12 +34,9 @@ class BasicService extends Service {
         "Authorization": "Bearer $token",
       },
     );
+    debugPrint(response.body);
 
-    if (response.statusCode == 200) {
-      return DayLogResponseModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(response.body);
-    }
+    return DayLogResponseModel.fromJson(jsonDecode(response.body));
   }
 
   Future<PartyUsersResponseModel?> getPartyUsers(String token) async {
