@@ -45,5 +45,6 @@ class SharedPrefHelper {
   static Future<void> clearUser() async {
     final pref = await SharedPreferences.getInstance();
     await pref.remove(_userKey);
+    await pref.remove(_tokenKey);
   }
 }
