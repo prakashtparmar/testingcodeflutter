@@ -8,6 +8,7 @@ import 'package:snap_check/models/day_log_store_locations_response_model.dart';
 import 'package:snap_check/models/party_user_response_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details_response_model.dart';
+import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/service.dart';
 import 'package:path/path.dart';
 
@@ -19,7 +20,7 @@ class BasicService extends Service {
     );
 
     if (response.statusCode == 200) {
-      return TourDetailsResponseModel.fromJson(jsonDecode(response.body));
+      return TourDetailsResponseModel.fromJson(_handleResponse(response));
     } else {
       throw Exception(response.body);
     }
@@ -36,7 +37,7 @@ class BasicService extends Service {
     );
     debugPrint(response.body);
 
-    return DayLogResponseModel.fromJson(jsonDecode(response.body));
+    return DayLogResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<PartyUsersResponseModel?> getPartyUsers(String token) async {
@@ -48,7 +49,7 @@ class BasicService extends Service {
       },
     );
 
-    return PartyUsersResponseModel.fromJson(jsonDecode(response.body));
+    return PartyUsersResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<PostDayLogsResponseModel?> postDayLog(
@@ -74,6 +75,7 @@ class BasicService extends Service {
     }
     // Send the request
     final response = await request.send();
+    debugPrint(response.stream.bytesToString().toString());
     final responseString = await response.stream.bytesToString();
 
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
@@ -91,7 +93,7 @@ class BasicService extends Service {
       },
     );
 
-    return DayLogDetailResponseModel.fromJson(jsonDecode(response.body));
+    return DayLogDetailResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<DayLogStoreLocationResponseModel?> postDayLogLocations(
@@ -101,13 +103,13 @@ class BasicService extends Service {
     final response = await http.post(
       Uri.parse(apiDayLogStoreLocations),
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
       body: jsonEncode(body),
     );
 
-    return DayLogStoreLocationResponseModel.fromJson(jsonDecode(response.body));
+    return DayLogStoreLocationResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<PostDayLogsResponseModel?> postCloseDay(
@@ -136,5 +138,31 @@ class BasicService extends Service {
     final responseString = await response.stream.bytesToString();
 
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
+  }
+
+  dynamic _handleResponse(http.Response response) {
+    debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response status: ${response.statusCode}');
+    debugPrint('Response body: ${response.body}');
+
+    switch (response.statusCode) {
+      case 200:
+        return jsonDecode(response.body);
+
+      case 401:
+        throw UnauthorizedException();
+
+      case 404:
+        throw NotFoundException();
+
+      case 500:
+        throw ServerErrorException();
+
+      default:
+        throw UnknownApiException(
+          response.statusCode,
+          response.reasonPhrase ?? 'Unexpected error',
+        );
+    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/models/user_model.dart';
+import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/auth_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
@@ -46,12 +47,33 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
         _user = response!.data!.user;
         _isLoading = false;
       });
+    } on UnauthorizedException {
+      SharedPrefHelper.clearUser(); // Optional: clear stored token
+      _redirectToLogin(); // Push + reset to login
+    } on NotFoundException {
+      _showError('User not found.');
+    } on ServerErrorException {
+      _showError('Server error. Try again later.');
+    } on ApiException catch (e) {
+      _showError(e.message);
     } catch (e) {
+      _showError('Something went wrong.');
       debugPrint(e.toString());
+    } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _redirectToLogin() {
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   @override

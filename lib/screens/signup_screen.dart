@@ -74,10 +74,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _signup,
-                  child: Text(
-                    "Create Account",
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
+                  child: Text("Create Account"),
                 ),
               ),
               const SizedBox(height: 30),

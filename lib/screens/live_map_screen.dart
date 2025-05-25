@@ -7,6 +7,7 @@ import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/models/day_log_detail_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
+import 'dart:io';
 
 const double _zoomLevel = 17;
 const double _tilt = 45;
@@ -37,6 +38,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   DayLogDetailDataModel? dayLogDetailModel;
   String? _token;
   bool _isFirstLocationCaptured = false;
+  bool _isTracking = false;
+
   CameraPosition? _initialCameraPosition;
   BitmapDescriptor? _vehicleIcon; // Custom icon for moving vehicle marker
 
@@ -44,9 +47,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("logId ${widget.logId}");
     _fetchDayLogDetail(); // Fetch detail info about the log
     _loadCustomMarker(); // Load custom vehicle icon for current location marker
-    _startTracking(); // Start location tracking timer
+    // _startTracking(); // Start location tracking timer
   }
   // After: Widget initialized and tracking started
 
@@ -104,13 +108,16 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       return;
     }
 
-    // Periodic timer every 1 minute to get current position
-    _locationTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+    // Start listening to position updates
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // updates every 10 meters
+      ),
+    ).listen((Position position) {
       final latLng = LatLng(position.latitude, position.longitude);
-      if (!mounted) return; // <-- check if still mounted
+      if (!mounted) return;
+
       setState(() {
         currentPosition = latLng;
         _routePoints.add(latLng);
@@ -119,7 +126,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           "lng": latLng.longitude,
         });
 
-        // Before: Handle first captured location on map
         if (!_isFirstLocationCaptured) {
           _initialCameraPosition = CameraPosition(
             target: latLng,
@@ -141,7 +147,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
           _isFirstLocationCaptured = true;
         } else {
-          // After first capture, update current location marker
           _movingMarker = Marker(
             markerId: const MarkerId('currentLocation'),
             position: latLng,
@@ -157,9 +162,80 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         }
       });
 
-      _sendLocationsToServer(); // Send batched location data to backend
+      _sendLocationsToServer();
+      _isTracking = true;
     });
   }
+
+  void _stopTracking() {
+    _showCheckoutBottomSheet();
+  }
+
+  void _showCheckoutBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder:
+          (context) => Padding(
+            padding: MediaQuery.of(context).viewInsets,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Closing K.M.',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (val) => closingKm = val,
+                      validator:
+                          (val) =>
+                              val == null || val.isEmpty
+                                  ? 'Enter closing KM'
+                                  : null,
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: _pickClosingImage,
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey),
+                        ),
+                        child:
+                            closingImageFile == null
+                                ? const Center(
+                                  child: Text('Tap to capture image'),
+                                )
+                                : Image.file(
+                                  File(closingImageFile!.path),
+                                  fit: BoxFit.cover,
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _submitCheckout,
+                        child: const Text('Submit Checkout'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
   // After: Periodic location updates added to map and sent to server
 
   // Before: Send collected location points to server via API
@@ -228,6 +304,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       Navigator.of(context).pop(); // Hide progress dialog
 
       if (response!.success == true) {
+        _locationTimer?.cancel();
+        _positionStream?.cancel();
+        setState(() => _isTracking = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Checkout submitted successfully!')),
         );
@@ -324,51 +403,60 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Closing K.M.',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                            onChanged: (val) => closingKm = val,
-                            validator:
-                                (val) =>
-                                    val == null || val.isEmpty
-                                        ? 'Enter closing KM'
-                                        : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Align(
-                          alignment: Alignment.topCenter,
-                          child: InkWell(
-                            onTap: _pickClosingImage,
-                            child: Container(
-                              height: 50,
-                              width: 50,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   crossAxisAlignment: CrossAxisAlignment.start,
+                    //   children: [
+                    //     Expanded(
+                    //       child: TextFormField(
+                    //         decoration: const InputDecoration(
+                    //           labelText: 'Closing K.M.',
+                    //           border: OutlineInputBorder(),
+                    //         ),
+                    //         keyboardType: TextInputType.number,
+                    //         onChanged: (val) => closingKm = val,
+                    //         validator:
+                    //             (val) =>
+                    //                 val == null || val.isEmpty
+                    //                     ? 'Enter closing KM'
+                    //                     : null,
+                    //       ),
+                    //     ),
+                    //     const SizedBox(width: 12),
+                    //     Align(
+                    //       alignment: Alignment.topCenter,
+                    //       child: InkWell(
+                    //         onTap: _pickClosingImage,
+                    //         child: Container(
+                    //           height: 50,
+                    //           width: 50,
+                    //           decoration: BoxDecoration(
+                    //             color: Theme.of(context).primaryColor,
+                    //             borderRadius: BorderRadius.circular(8),
+                    //           ),
+                    //           child: const Icon(
+                    //             Icons.camera_alt,
+                    //             color: Colors.white,
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     const SizedBox(height: 16),
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   child: ElevatedButton(
+                    //     onPressed: _submitCheckout,
+                    //     child: const Text('Submit Checkout'),
+                    //   ),
+                    // ),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submitCheckout,
-                        child: const Text('Submit Checkout'),
+                        onPressed: _isTracking ? _stopTracking : _startTracking,
+                        child: Text(
+                          _isTracking ? 'Stop Tracking' : 'Start Tracking',
+                        ),
                       ),
                     ),
                   ],

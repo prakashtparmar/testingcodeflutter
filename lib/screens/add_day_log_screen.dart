@@ -41,7 +41,13 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   String? notes;
   Position? currentPosition;
   GoogleMapController? mapController;
-  bool _isLoading = true;
+  bool _loadingTourDetails = true;
+  bool _loadingParties = true;
+  bool _loadingLocation = true;
+
+  bool get _isLoading =>
+      _loadingTourDetails || _loadingParties || _loadingLocation;
+
   final _formKey = GlobalKey<FormState>();
   @override
   void initState() {
@@ -50,6 +56,9 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   }
 
   Future<void> _loadUser() async {
+    _loadingTourDetails = true;
+    _loadingParties = true;
+    _loadingLocation = true;
     final tokenData = await SharedPrefHelper.getToken();
 
     setState(() {
@@ -61,7 +70,8 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
 
   Future<void> _fetchTourDetails() async {
     try {
-      setState(() => _isLoading = true);
+      setState(() => _loadingTourDetails = true);
+
       final response = await _basicService.getTourDetails();
       if (response != null && response.data != null) {
         setState(() {
@@ -78,7 +88,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     } catch (e) {
       debugPrint('Error fetching tour details: $e');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _loadingTourDetails = false);
     }
   }
 
@@ -95,53 +105,68 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       if (!mounted) {
         return;
       }
+    } finally {
+      setState(() => _loadingParties = false);
     }
   }
 
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+    try {
+      bool serviceEnabled;
+      LocationPermission permission;
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Location services are disabled. Please enable the services',
-          ),
-        ),
-      );
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are denied')),
+          const SnackBar(
+            content: Text(
+              'Location services are disabled. Please enable the services',
+            ),
+          ),
         );
         return;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Location permissions are permanently denied, we cannot request permissions.',
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permissions are denied')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location permissions are permanently denied, we cannot request permissions.',
+            ),
           ),
-        ),
-      );
-      return;
-    }
+        );
+        return;
+      }
 
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    setState(() {
-      currentPosition = position;
-    });
+      LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      );
+
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: locationSettings,
+      );
+      if (mounted) {
+        setState(() {
+          currentPosition = position;
+        });
+      }
+    } catch (e) {
+      debugPrint('Location error: $e');
+    } finally {
+      setState(() => _loadingLocation = false);
+    }
   }
 
   @override

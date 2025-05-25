@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:snap_check/models/login_response_model.dart';
 import 'package:snap_check/models/user_model.dart';
 import 'package:snap_check/models/user_response_model.dart';
+import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
@@ -70,13 +71,35 @@ class AuthService extends Service {
   Future<UserResponseModel?> fetchUserDetail(String token) async {
     final response = await http.post(
       Uri.parse(apiUserDetail),
-      headers: {'Authorization': 'Bearer $token'},
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode == 200) {
-      return UserResponseModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('User not found');
+    return UserResponseModel.fromJson(_handleResponse(response));
+  }
+
+  // Common response handler
+  dynamic _handleResponse(http.Response response) {
+    debugPrint('Response status: ${response.statusCode}');
+    debugPrint('Response body: ${response.body}');
+
+    switch (response.statusCode) {
+      case 200:
+        return jsonDecode(response.body);
+
+      case 401:
+        throw UnauthorizedException();
+
+      case 404:
+        throw NotFoundException();
+
+      case 500:
+        throw ServerErrorException();
+
+      default:
+        throw UnknownApiException(
+          response.statusCode,
+          response.reasonPhrase ?? 'Unexpected error',
+        );
     }
   }
 }

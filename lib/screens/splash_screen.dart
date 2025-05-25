@@ -23,7 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2)); // splash duration
 
     final user = await SharedPrefHelper.loadUser();
-    debugPrint("user ${user?.email}");
+    final token = await SharedPrefHelper.getToken();
+    debugPrint("user token : $token");
     if (!mounted) return;
     if (user != null) {
       Navigator.pushReplacement(

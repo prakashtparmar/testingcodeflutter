@@ -58,10 +58,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _resetPassword,
-                  child: Text(
-                    "Send Reset Link",
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
+                  child: Text("Send Reset Link"),
                 ),
               ),
               const SizedBox(height: 30),
