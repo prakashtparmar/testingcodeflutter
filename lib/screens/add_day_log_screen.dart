@@ -38,7 +38,6 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   String? placeVisited;
   String? openingKm;
   XFile? imageFile;
-  String? notes;
   Position? currentPosition;
   GoogleMapController? mapController;
   bool _loadingTourDetails = true;
@@ -284,21 +283,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        // Notes field
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Notes',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 3,
-                          onChanged: (val) => notes = val,
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Enter notes'
-                                      : null,
-                        ),
+                        
 
                         const SizedBox(height: 12),
 
@@ -425,7 +410,6 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       "tour_type": selectedTourType!.id.toString(),
       "place_visit": placeVisited!,
       "opening_km": openingKm!,
-      "note": notes!,
       "opening_km_latitude": currentPosition!.latitude.toString(),
       "opening_km_longitude": currentPosition!.longitude.toString(),
     };

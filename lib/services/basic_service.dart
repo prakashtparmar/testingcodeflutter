@@ -104,6 +104,7 @@ class BasicService extends Service {
       Uri.parse(apiDayLogStoreLocations),
       headers: {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
         "Authorization": "Bearer $token",
       },
       body: jsonEncode(body),

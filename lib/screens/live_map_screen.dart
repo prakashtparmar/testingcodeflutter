@@ -30,7 +30,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   String? closingKm;
   LatLng? currentPosition;
   Timer? _locationTimer;
-  List<Map<String, double>> _collectedLocations = [];
+  final List<Map<String, double>> _collectedLocations = [];
   Marker? _movingMarker;
   final Set<Marker> _markers = {};
 
@@ -41,7 +41,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   bool _isTracking = false;
 
   CameraPosition? _initialCameraPosition;
-  BitmapDescriptor? _vehicleIcon; // Custom icon for moving vehicle marker
+  String? notes;
 
   // Before: Widget initialized
   @override
@@ -49,18 +49,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     super.initState();
     debugPrint("logId ${widget.logId}");
     _fetchDayLogDetail(); // Fetch detail info about the log
-    _loadCustomMarker(); // Load custom vehicle icon for current location marker
     // _startTracking(); // Start location tracking timer
   }
   // After: Widget initialized and tracking started
 
-  // Before: Load custom vehicle icon marker (instead of default marker)
-  void _loadCustomMarker() async {
-    _vehicleIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      AppAssets.mapPin,
-    );
-  }
   // After: Custom marker icon loaded
 
   // Before: Fetch day log detail from API using token
@@ -117,13 +109,25 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     ).listen((Position position) {
       final latLng = LatLng(position.latitude, position.longitude);
       if (!mounted) return;
-
+      // Animate the camera
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: latLng,
+              zoom: _zoomLevel,
+              tilt: _tilt,
+              bearing: _bearing,
+            ),
+          ),
+        );
+      }
       setState(() {
         currentPosition = latLng;
         _routePoints.add(latLng);
         _collectedLocations.add({
-          "lat": latLng.latitude,
-          "lng": latLng.longitude,
+          "latitude": latLng.latitude,
+          "longitude": latLng.longitude,
         });
 
         if (!_isFirstLocationCaptured) {
@@ -160,10 +164,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             ..removeWhere((m) => m.markerId.value == 'currentLocation')
             ..add(_movingMarker!);
         }
+        _sendLocationsToServer();
+        _isTracking = true;
       });
-
-      _sendLocationsToServer();
-      _isTracking = true;
     });
   }
 
@@ -175,64 +178,90 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder:
-          (context) => Padding(
-            padding: MediaQuery.of(context).viewInsets,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Closing K.M.',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) => closingKm = val,
-                      validator:
-                          (val) =>
-                              val == null || val.isEmpty
-                                  ? 'Enter closing KM'
-                                  : null,
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: _pickClosingImage,
-                      child: Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: MediaQuery.of(context).viewInsets,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Closing K.M.',
+                          border: OutlineInputBorder(),
                         ),
-                        child:
-                            closingImageFile == null
-                                ? const Center(
-                                  child: Text('Tap to capture image'),
-                                )
-                                : Image.file(
-                                  File(closingImageFile!.path),
-                                  fit: BoxFit.cover,
-                                ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (val) => closingKm = val,
+                        validator:
+                            (val) =>
+                                val == null || val.isEmpty
+                                    ? 'Enter closing KM'
+                                    : null,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _submitCheckout,
-                        child: const Text('Submit Checkout'),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Notes',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        onChanged: (val) => notes = val,
+                        validator:
+                            (val) =>
+                                val == null || val.isEmpty
+                                    ? 'Enter notes'
+                                    : null,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.camera,
+                          );
+                          if (picked != null) {
+                            setModalState(() => closingImageFile = picked);
+                          }
+                        },
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child:
+                              closingImageFile == null
+                                  ? const Center(
+                                    child: Text('Tap to capture image'),
+                                  )
+                                  : Image.file(
+                                    File(closingImageFile!.path),
+                                    fit: BoxFit.cover,
+                                  ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _submitCheckout(context),
+                          child: const Text('Submit Checkout'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -240,9 +269,25 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
   // Before: Send collected location points to server via API
   Future<void> _sendLocationsToServer() async {
-    if (_collectedLocations.isEmpty || _token == null) return;
+    if (_collectedLocations.isEmpty) {
+      debugPrint("Location list is empty. Skipping send.");
+      return;
+    }
 
-    final body = {"day_log_id": widget.logId, "locations": _collectedLocations};
+    if (_token == null) {
+      debugPrint("Missing token or logId. Skipping send.");
+      return;
+    }
+
+    if (dayLogDetailModel == null) {
+      debugPrint("Missing dayLogDetailModel. Skipping send.");
+      return;
+    }
+
+    final body = {
+      "day_log_id": dayLogDetailModel!.id ?? 0,
+      "locations": _collectedLocations,
+    };
 
     try {
       final response = await BasicService().postDayLogLocations(_token!, body);
@@ -269,11 +314,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   // After: Resources cleaned up
 
   // Before: Validate form and submit checkout (closing KM + image + location)
-  Future<void> _submitCheckout() async {
+  Future<void> _submitCheckout(BuildContext rootContext) async {
     if (_formKey.currentState?.validate() != true ||
         closingImageFile == null ||
         currentPosition == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(rootContext).showSnackBar(
         const SnackBar(
           content: Text(
             'Please fill closing KM, capture image, and wait for location.',
@@ -283,47 +328,53 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       return;
     }
 
-    // Show progress dialog
     showDialog(
-      context: context,
+      context: rootContext,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      final Map<String, String> formData = {
-        "day_log_id": "\${widget.logId}",
+      final formData = {
+        "day_log_id": "${dayLogDetailModel?.id ?? "0"}",
         "closing_km": closingKm!,
+        "note": notes!,
+        "closing_km_latitude": currentPosition!.latitude.toString(),
+        "closing_km_longitude": currentPosition!.longitude.toString(),
       };
+
       final response = await BasicService().postCloseDay(
         _token!,
         closingImageFile,
         formData,
       );
 
-      Navigator.of(context).pop(); // Hide progress dialog
+      Navigator.of(rootContext).pop(); // Hide loading dialog
 
-      if (response!.success == true) {
+      if (response?.success == true) {
         _locationTimer?.cancel();
         _positionStream?.cancel();
         setState(() => _isTracking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+
+        Navigator.of(rootContext).pop(); // Close bottom sheet
+        Navigator.of(context).pop(true); // Close LiveMapScreen
+
+        ScaffoldMessenger.of(rootContext).showSnackBar(
           const SnackBar(content: Text('Checkout submitted successfully!')),
         );
-
-        Navigator.of(context).pop(true); // Close screen returning true
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Submit failed: \${response.message}')),
+        ScaffoldMessenger.of(rootContext).showSnackBar(
+          SnackBar(content: Text('Submit failed: ${response?.message}')),
         );
       }
     } catch (e) {
-      Navigator.of(context).pop();
+      Navigator.of(rootContext).pop(); // Hide loading
       ScaffoldMessenger.of(
-        context,
+        rootContext,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
+
   // After: Checkout submitted or error shown
 
   // Before: Open camera to pick closing image
@@ -403,53 +454,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Row(
-                    //   crossAxisAlignment: CrossAxisAlignment.start,
-                    //   children: [
-                    //     Expanded(
-                    //       child: TextFormField(
-                    //         decoration: const InputDecoration(
-                    //           labelText: 'Closing K.M.',
-                    //           border: OutlineInputBorder(),
-                    //         ),
-                    //         keyboardType: TextInputType.number,
-                    //         onChanged: (val) => closingKm = val,
-                    //         validator:
-                    //             (val) =>
-                    //                 val == null || val.isEmpty
-                    //                     ? 'Enter closing KM'
-                    //                     : null,
-                    //       ),
-                    //     ),
-                    //     const SizedBox(width: 12),
-                    //     Align(
-                    //       alignment: Alignment.topCenter,
-                    //       child: InkWell(
-                    //         onTap: _pickClosingImage,
-                    //         child: Container(
-                    //           height: 50,
-                    //           width: 50,
-                    //           decoration: BoxDecoration(
-                    //             color: Theme.of(context).primaryColor,
-                    //             borderRadius: BorderRadius.circular(8),
-                    //           ),
-                    //           child: const Icon(
-                    //             Icons.camera_alt,
-                    //             color: Colors.white,
-                    //           ),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
                     const SizedBox(height: 16),
-                    // SizedBox(
-                    //   width: double.infinity,
-                    //   child: ElevatedButton(
-                    //     onPressed: _submitCheckout,
-                    //     child: const Text('Submit Checkout'),
-                    //   ),
-                    // ),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
