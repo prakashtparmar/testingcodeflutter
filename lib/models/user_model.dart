@@ -18,9 +18,9 @@ class User {
   int? countryId;
   int? roleId;
   String? deletedAt;
-  City? city;
-  State? state;
-  Country? country;
+  CityModel? city;
+  StateModel? state;
+  CountryModel? country;
   Role? role;
 
   User({
@@ -59,10 +59,10 @@ class User {
     countryId = json['country_id'];
     roleId = json['role_id'];
     deletedAt = json['deleted_at'];
-    city = json['city'] != null ? City.fromJson(json['city']) : null;
-    state = json['state'] != null ? State.fromJson(json['state']) : null;
+    city = json['city'] != null ? CityModel.fromJson(json['city']) : null;
+    state = json['state'] != null ? StateModel.fromJson(json['state']) : null;
     country =
-        json['country'] != null ? Country.fromJson(json['country']) : null;
+        json['country'] != null ? CountryModel.fromJson(json['country']) : null;
     role = json['role'] != null ? Role.fromJson(json['role']) : null;
   }
 

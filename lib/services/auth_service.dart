@@ -22,18 +22,24 @@ class AuthService extends Service {
     return LoginResponseModel.fromJson(jsonDecode(response.body));
   }
 
-  Future<User?> registerWithEmailPassword(String email, String password) async {
+  Future<User?> registerWithEmailPassword({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String addressLine1,
+    required String addressLine2,
+    required int cityId,
+    required int stateId,
+    required int countryId,
+  }) async {
     final response = await http.post(
       Uri.parse(apiRegister),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    if (response.statusCode == 200) {
-      return User.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to register');
-    }
+    return User.fromJson(_handleResponse(response));
   }
 
   Future<void> sendPasswordResetEmail(String email) async {

@@ -1,4 +1,4 @@
-class City {
+class CityModel {
   int? id;
   String? name;
   int? stateId;
@@ -6,7 +6,7 @@ class City {
   String? updatedAt;
   String? deletedAt;
 
-  City({
+  CityModel({
     this.id,
     this.name,
     this.stateId,
@@ -15,7 +15,7 @@ class City {
     this.deletedAt,
   });
 
-  City.fromJson(Map<String, dynamic> json) {
+  CityModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     name = json['name'];
     stateId = json['state_id'];
