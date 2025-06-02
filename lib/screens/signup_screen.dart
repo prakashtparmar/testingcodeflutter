@@ -158,14 +158,18 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               DropdownButtonFormField<CountryModel>(
+                isExpanded: true, // ✅ Important fix
                 value: _selectedCountry,
                 items:
                     _countries.map((country) {
                       return DropdownMenuItem(
                         value: country,
-                        child: Text(country.name ?? ''),
+                        child: Text(
+                          country.name ?? '',
+                          overflow:
+                              TextOverflow.ellipsis, // Truncate long names
+                        ),
                       );
                     }).toList(),
                 decoration: const InputDecoration(
@@ -183,6 +187,8 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 20),
 
               DropdownButtonFormField<StateModel>(
+                isExpanded: true, // ✅ Important fix
+
                 value: _selectedState,
                 items:
                     _states
@@ -208,6 +214,8 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 20),
 
               DropdownButtonFormField<CityModel>(
+                isExpanded: true, // ✅ Important fix
+
                 value: _selectedCity,
                 items:
                     _cities.where((c) => c.stateId == _selectedState?.id).map((
