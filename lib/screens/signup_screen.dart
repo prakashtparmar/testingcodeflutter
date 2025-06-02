@@ -3,6 +3,7 @@ import 'package:snap_check/models/city_model.dart';
 import 'package:snap_check/models/country_model.dart';
 import 'package:snap_check/models/state_model.dart';
 import 'package:snap_check/screens/login_screen.dart';
+import 'package:snap_check/services/basic_service.dart';
 import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -23,22 +24,40 @@ class _SignupScreenState extends State<SignupScreen> {
   CountryModel? _selectedCountry;
   StateModel? _selectedState;
   CityModel? _selectedCity;
+  bool _loadingTourDetails = true;
 
   // Sample data - replace with API fetched list in real app
-  final List<CountryModel> _countries = [
-    CountryModel(id: 1, name: 'India'),
-    CountryModel(id: 2, name: 'USA'),
-  ];
-  final List<StateModel> _states = [
-    StateModel(id: 1, name: 'Maharashtra', countryId: 1),
-    StateModel(id: 2, name: 'California', countryId: 2),
-  ];
-  final List<CityModel> _cities = [
-    CityModel(id: 1, name: 'Mumbai', stateId: 1),
-    CityModel(id: 2, name: 'Los Angeles', stateId: 2),
-  ];
+  List<CountryModel> _countries = [];
+  List<StateModel> _states = [];
+  List<CityModel> _cities = [];
 
   final AuthService _authService = AuthService();
+  final BasicService _basicService = BasicService();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocations();
+  }
+
+  Future<void> _fetchLocations() async {
+    try {
+      setState(() => _loadingTourDetails = true);
+
+      final response = await _basicService.getLocations();
+      if (response != null && response.data != null) {
+        setState(() {
+          _countries = response.data!;
+          _states = response.data!.first.states!;
+          _cities = response.data!.first.states!.first.cities!;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching tour details: $e');
+    } finally {
+      setState(() => _loadingTourDetails = false);
+    }
+  }
 
   void _signup() async {
     if (_selectedCity == null ||
@@ -156,6 +175,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 onChanged:
                     (value) => setState(() {
                       _selectedCountry = value;
+                      _states = value!.states!;
                       _selectedState = null;
                       _selectedCity = null;
                     }),
@@ -181,6 +201,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 onChanged:
                     (value) => setState(() {
                       _selectedState = value;
+                      _cities = value!.cities!;
                       _selectedCity = null;
                     }),
               ),

@@ -1,3 +1,5 @@
+import 'package:snap_check/models/state_model.dart';
+
 class CountryModel {
   int? id;
   String? name;
@@ -5,6 +7,7 @@ class CountryModel {
   String? createdAt;
   String? updatedAt;
   String? deletedAt;
+  List<StateModel>? states;
 
   CountryModel({
     this.id,
@@ -13,6 +16,7 @@ class CountryModel {
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
+    this.states,
   });
 
   CountryModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +26,12 @@ class CountryModel {
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     deletedAt = json['deleted_at'];
+    if (json['states'] != null) {
+      states = <StateModel>[];
+      json['states'].forEach((v) {
+        states!.add(StateModel.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -32,6 +42,9 @@ class CountryModel {
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
     data['deleted_at'] = deletedAt;
+    if (states != null) {
+      data['states'] = states!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
 }
