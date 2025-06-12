@@ -2,22 +2,39 @@ import 'package:snap_check/models/city_model.dart';
 import 'package:snap_check/models/country_model.dart';
 import 'package:snap_check/models/role_model.dart';
 import 'package:snap_check/models/state_model.dart';
+import 'package:snap_check/models/taluka_model.dart';
 
 class User {
   int? id;
   String? firstName;
   String? lastName;
+  String? mobile;
+  String? dob;
+  String? emergencyContactNo;
+  String? gender;
+  String? maritalStatus;
   String? addressLine1;
   String? addressLine2;
-  String? email;
-  String? emailVerifiedAt;
-  String? createdAt;
-  String? updatedAt;
+  String? designationId;
+  int? managerId;
+  int? roleId;
+  int? talukaId;
   int? cityId;
   int? stateId;
   int? countryId;
-  int? roleId;
+  String? email;
+  String? emailVerifiedAt;
+  String? lastLoginAt;
+  String? lastLogoutAt;
+  String? fcmToken;
+  bool? allowTracking;
+  String? status;
+  String? createdAt;
+  String? updatedAt;
   String? deletedAt;
+  String? fullName;
+  String? fullAddress;
+  TalukaModel? taluka;
   CityModel? city;
   StateModel? state;
   CountryModel? country;
@@ -27,43 +44,72 @@ class User {
     this.id,
     this.firstName,
     this.lastName,
+    this.mobile,
+    this.dob,
+    this.emergencyContactNo,
+    this.gender,
+    this.maritalStatus,
     this.addressLine1,
     this.addressLine2,
-    this.email,
-    this.emailVerifiedAt,
-    this.createdAt,
-    this.updatedAt,
+    this.designationId,
+    this.managerId,
+    this.roleId,
+    this.talukaId,
     this.cityId,
     this.stateId,
     this.countryId,
-    this.roleId,
+    this.email,
+    this.lastLoginAt,
+    this.lastLogoutAt,
+    this.fcmToken,
+    this.allowTracking,
+    this.status,
+    this.createdAt,
+    this.updatedAt,
     this.deletedAt,
+    this.fullName,
+    this.fullAddress,
+    this.taluka,
     this.city,
     this.state,
     this.country,
-    this.role,
   });
 
   User.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     firstName = json['first_name'];
     lastName = json['last_name'];
-    addressLine1 = json['address_line1'];
-    addressLine2 = json['address_line2'];
-    email = json['email'];
-    emailVerifiedAt = json['email_verified_at'];
-    createdAt = json['created_at'];
-    updatedAt = json['updated_at'];
+    mobile = json['mobile'];
+    dob = json['dob'];
+    emergencyContactNo = json['emergency_contact_no'];
+    gender = json['gender'];
+    maritalStatus = json['marital_status'];
+    addressLine1 = json['address_line_1'];
+    addressLine2 = json['address_line_2'];
+    designationId = json['designation_id'];
+    managerId = json['manager_id'];
+    roleId = json['role_id'];
+    talukaId = json['taluka_id'];
     cityId = json['city_id'];
     stateId = json['state_id'];
     countryId = json['country_id'];
-    roleId = json['role_id'];
+    email = json['email'];
+    lastLoginAt = json['last_login_at'];
+    lastLogoutAt = json['last_logout_at'];
+    fcmToken = json['fcm_token'];
+    allowTracking = json['allow_tracking'];
+    status = json['status'];
+    createdAt = json['created_at'];
+    updatedAt = json['updated_at'];
     deletedAt = json['deleted_at'];
+    fullName = json['full_name'];
+    fullAddress = json['full_address'];
+    taluka =
+        json['taluka'] != null ? TalukaModel.fromJson(json['taluka']) : null;
     city = json['city'] != null ? CityModel.fromJson(json['city']) : null;
     state = json['state'] != null ? StateModel.fromJson(json['state']) : null;
     country =
         json['country'] != null ? CountryModel.fromJson(json['country']) : null;
-    role = json['role'] != null ? Role.fromJson(json['role']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -71,17 +117,34 @@ class User {
     data['id'] = id;
     data['first_name'] = firstName;
     data['last_name'] = lastName;
-    data['address_line1'] = addressLine1;
-    data['address_line2'] = addressLine2;
-    data['email'] = email;
-    data['email_verified_at'] = emailVerifiedAt;
-    data['created_at'] = createdAt;
-    data['updated_at'] = updatedAt;
+    data['mobile'] = mobile;
+    data['dob'] = dob;
+    data['emergency_contact_no'] = emergencyContactNo;
+    data['gender'] = gender;
+    data['marital_status'] = maritalStatus;
+    data['address_line_1'] = addressLine1;
+    data['address_line_2'] = addressLine2;
+    data['designation_id'] = designationId;
+    data['manager_id'] = managerId;
+    data['role_id'] = roleId;
+    data['taluka_id'] = talukaId;
     data['city_id'] = cityId;
     data['state_id'] = stateId;
     data['country_id'] = countryId;
-    data['role_id'] = roleId;
+    data['email'] = email;
+    data['last_login_at'] = lastLoginAt;
+    data['last_logout_at'] = lastLogoutAt;
+    data['fcm_token'] = fcmToken;
+    data['allow_tracking'] = allowTracking;
+    data['status'] = status;
+    data['created_at'] = createdAt;
+    data['updated_at'] = updatedAt;
     data['deleted_at'] = deletedAt;
+    data['full_name'] = fullName;
+    data['full_address'] = fullAddress;
+    if (taluka != null) {
+      data['taluka'] = taluka!.toJson();
+    }
     if (city != null) {
       data['city'] = city!.toJson();
     }
@@ -90,9 +153,6 @@ class User {
     }
     if (country != null) {
       data['country'] = country!.toJson();
-    }
-    if (role != null) {
-      data['role'] = role!.toJson();
     }
     return data;
   }

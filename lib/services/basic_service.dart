@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
+import 'package:snap_check/models/leaves_response_model.dart';
 import 'package:snap_check/models/locations_response_model.dart';
 import 'package:snap_check/models/party_user_response_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
@@ -152,6 +153,20 @@ class BasicService extends Service {
     final responseString = await response.stream.bytesToString();
 
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
+  }
+
+  Future<LeavesResponseModel?> getLeaves(String token) async {
+
+    final response = await http.get(
+      Uri.parse(apiLeaves),
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": "Bearer $token",
+      },
+    );
+    debugPrint(response.body);
+
+    return LeavesResponseModel.fromJson(_handleResponse(response));
   }
 
   dynamic _handleResponse(http.Response response) {

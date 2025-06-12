@@ -38,6 +38,7 @@ class MyApp extends StatelessWidget {
         '/dayLogs': (context) => DayLogsListScreen(),
         '/addDayLog': (context) => AddDayLogScreen(),
         '/userDetail': (context) => UserDetailScreen(),
+        '/leaves': (context) => DayLogsListScreen(),
       },
     );
   }

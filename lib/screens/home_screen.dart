@@ -86,6 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         _navigationRoutes(context, "/dayLogs");
                       },
                     ),
+                    _buildGridItem(
+                      context,
+                      icon: AppAssets.leaves,
+                      title: "Leaves",
+                      onTap: () {
+                        _navigationRoutes(context, "/leaves");
+                      },
+                    ),
                   ],
                 ),
               ],
