@@ -8,7 +8,7 @@ class LeavesDataModel {
   String? startDate;
   String? endDate;
   String? status;
-  Null? approvedBy;
+  int? approvedBy;
   String? reason;
   String? createdAt;
   String? updatedAt;
