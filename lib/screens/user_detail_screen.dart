@@ -99,12 +99,14 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // ---------- PROFILE CARD ----------
                     Card(
-                      elevation: 3,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 3,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -115,7 +117,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                             CircleAvatar(
                               radius: 40,
                               backgroundColor: colorScheme.primary.withOpacity(
-                                0.2,
+                                0.15,
                               ),
                               child: const Icon(
                                 Icons.person,
@@ -123,17 +125,17 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                                 color: Colors.black54,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             Text(
                               "${_user?.firstName ?? ''} ${_user?.lastName ?? ''}"
                                   .trim(),
                               style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
-                              _user!.email ?? "",
+                              _user!.email ?? '',
                               style: textTheme.bodyMedium?.copyWith(
                                 color: Colors.grey[600],
                               ),
@@ -142,12 +144,23 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
+
+                    // ---------- INFO CARD ----------
+                    Text(
+                      "User Information",
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
                     Card(
-                      elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 2,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -155,126 +168,30 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                         ),
                         child: Column(
                           children: [
-                            if (_user?.designation?.name != null)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.supervised_user_circle,
-                                    size: 22,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Designation",
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        Text(
-                                          "${_user!.designation!.name}",
-                                          style: textTheme.bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            const SizedBox(height: 15),
-                            if (_user?.manager?.firstName != null)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.verified_user,
-                                    size: 22,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Manager",
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        Text(
-                                          "${_user!.manager!.firstName} ${_user!.manager!.lastName}",
-                                          style: textTheme.bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            const SizedBox(height: 15),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.male,
-                                  size: 22,
-                                  color: colorScheme.primary,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Gender",
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      Text(
-                                        _user!.gender!,
-                                        style: textTheme.bodyMedium,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            _infoRow(
+                              icon: Icons.supervised_user_circle,
+                              title: "Designation",
+                              value: _user?.designation?.name ?? 'N/A',
                             ),
-                            const SizedBox(height: 15),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  size: 22,
-                                  color: colorScheme.primary,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Full Address",
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      Text(
-                                        _getFullAddress(),
-                                        style: textTheme.bodyMedium,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            const Divider(height: 30),
+                            _infoRow(
+                              icon: Icons.verified_user,
+                              title: "Manager",
+                              value:
+                                  "${_user?.manager?.firstName ?? ''} ${_user?.manager?.lastName ?? ''}"
+                                      .trim(),
+                            ),
+                            const Divider(height: 30),
+                            _infoRow(
+                              icon: Icons.wc,
+                              title: "Gender",
+                              value: _user?.gender ?? 'N/A',
+                            ),
+                            const Divider(height: 30),
+                            _infoRow(
+                              icon: Icons.location_on,
+                              title: "Full Address",
+                              value: _getFullAddress(),
                             ),
                           ],
                         ),
@@ -283,6 +200,39 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                   ],
                 ),
               ),
+    );
+  }
+
+  Widget _infoRow({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 22, color: colorScheme.primary),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value.isNotEmpty ? value : "N/A",
+                style: textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
