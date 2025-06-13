@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
+import 'package:snap_check/models/leave_types_response_model.dart';
 import 'package:snap_check/models/leaves_response_model.dart';
 import 'package:snap_check/models/locations_response_model.dart';
 import 'package:snap_check/models/party_user_response_model.dart';
@@ -27,10 +28,14 @@ class BasicService extends Service {
     return LocationsResponseModel.fromJson(_handleResponse(response));
   }
 
-  Future<TourDetailsResponseModel?> getTourDetails() async {
+  Future<TourDetailsResponseModel?> getTourDetails(String token) async {
     final response = await http.get(
       Uri.parse(apiTourDetails),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": "Bearer $token",
+      },
     );
 
     if (response.statusCode == 200) {
@@ -46,10 +51,10 @@ class BasicService extends Service {
       Uri.parse(apiDayLogs),
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
     );
-    debugPrint(response.body);
 
     return DayLogResponseModel.fromJson(_handleResponse(response));
   }
@@ -59,6 +64,7 @@ class BasicService extends Service {
       Uri.parse(apiPartyUsers),
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
     );
@@ -103,6 +109,7 @@ class BasicService extends Service {
       Uri.parse('$apiDayLogs/$dayLog'),
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
     );
@@ -117,8 +124,8 @@ class BasicService extends Service {
     final response = await http.post(
       Uri.parse(apiDayLogStoreLocations),
       headers: {
-        'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
       body: jsonEncode(body),
@@ -156,17 +163,29 @@ class BasicService extends Service {
   }
 
   Future<LeavesResponseModel?> getLeaves(String token) async {
-
     final response = await http.get(
       Uri.parse(apiLeaves),
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
     );
-    debugPrint(response.body);
 
     return LeavesResponseModel.fromJson(_handleResponse(response));
+  }
+
+  Future<LeaveTypeResponseModel?> getLeaveTypes(String token) async {
+    final response = await http.get(
+      Uri.parse(apiLeavesTypes),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    return LeaveTypeResponseModel.fromJson(_handleResponse(response));
   }
 
   dynamic _handleResponse(http.Response response) {

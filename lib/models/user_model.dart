@@ -1,5 +1,6 @@
 import 'package:snap_check/models/city_model.dart';
 import 'package:snap_check/models/country_model.dart';
+import 'package:snap_check/models/designation_model.dart';
 import 'package:snap_check/models/role_model.dart';
 import 'package:snap_check/models/state_model.dart';
 import 'package:snap_check/models/taluka_model.dart';
@@ -15,7 +16,7 @@ class User {
   String? maritalStatus;
   String? addressLine1;
   String? addressLine2;
-  String? designationId;
+  int? designationId;
   int? managerId;
   int? roleId;
   int? talukaId;
@@ -23,7 +24,6 @@ class User {
   int? stateId;
   int? countryId;
   String? email;
-  String? emailVerifiedAt;
   String? lastLoginAt;
   String? lastLogoutAt;
   String? fcmToken;
@@ -34,11 +34,13 @@ class User {
   String? deletedAt;
   String? fullName;
   String? fullAddress;
-  TalukaModel? taluka;
   CityModel? city;
   StateModel? state;
   CountryModel? country;
   Role? role;
+  DesignationModel? designation;
+  User? manager;
+  TalukaModel? taluka;
 
   User({
     this.id,
@@ -69,10 +71,13 @@ class User {
     this.deletedAt,
     this.fullName,
     this.fullAddress,
-    this.taluka,
     this.city,
     this.state,
     this.country,
+    this.role,
+    this.designation,
+    this.manager,
+    this.taluka,
   });
 
   User.fromJson(Map<String, dynamic> json) {
@@ -104,12 +109,19 @@ class User {
     deletedAt = json['deleted_at'];
     fullName = json['full_name'];
     fullAddress = json['full_address'];
-    taluka =
-        json['taluka'] != null ? TalukaModel.fromJson(json['taluka']) : null;
     city = json['city'] != null ? CityModel.fromJson(json['city']) : null;
     state = json['state'] != null ? StateModel.fromJson(json['state']) : null;
     country =
         json['country'] != null ? CountryModel.fromJson(json['country']) : null;
+    role = json['role'] != null ? Role.fromJson(json['role']) : null;
+    designation =
+        json['designation'] != null
+            ? DesignationModel.fromJson(json['designation'])
+            : null;
+    manager =
+        json['manager'] != null ? User.fromJson(json['manager']) : null;
+    taluka =
+        json['taluka'] != null ? TalukaModel.fromJson(json['taluka']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -142,9 +154,6 @@ class User {
     data['deleted_at'] = deletedAt;
     data['full_name'] = fullName;
     data['full_address'] = fullAddress;
-    if (taluka != null) {
-      data['taluka'] = taluka!.toJson();
-    }
     if (city != null) {
       data['city'] = city!.toJson();
     }
@@ -153,6 +162,18 @@ class User {
     }
     if (country != null) {
       data['country'] = country!.toJson();
+    }
+    if (role != null) {
+      data['role'] = role!.toJson();
+    }
+    if (designation != null) {
+      data['designation'] = designation!.toJson();
+    }
+    if (manager != null) {
+      data['manager'] = manager!.toJson();
+    }
+    if (taluka != null) {
+      data['taluka'] = taluka!.toJson();
     }
     return data;
   }

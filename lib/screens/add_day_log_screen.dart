@@ -63,7 +63,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     setState(() {
       _token = tokenData ?? "";
     });
-    _fetchTourDetails();
+    await _fetchTourDetails();
     _getCurrentLocation();
   }
 
@@ -71,7 +71,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     try {
       setState(() => _loadingTourDetails = true);
 
-      final response = await _basicService.getTourDetails();
+      final response = await _basicService.getTourDetails(_token!);
       if (response != null && response.data != null) {
         setState(() {
           tourPurposes = response.data!.tourPurposes!;
@@ -83,9 +83,12 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           selectedTourType = response.data!.tourTypes!.first;
         });
         _fetchPartyUsers();
+      } else {
+        setState(() => _loadingTourDetails = false);
       }
     } catch (e) {
       debugPrint('Error fetching tour details: $e');
+      setState(() => _loadingTourDetails = false);
     } finally {
       setState(() => _loadingTourDetails = false);
     }
@@ -283,7 +286,6 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
                             ),
                           ],
                         ),
-                        
 
                         const SizedBox(height: 12),
 

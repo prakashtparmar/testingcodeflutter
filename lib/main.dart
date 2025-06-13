@@ -3,6 +3,7 @@ import 'package:snap_check/screens/add_day_log_screen.dart';
 import 'package:snap_check/screens/day_log_list_screen.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
+import 'package:snap_check/screens/leave_request_screen.dart';
 import 'package:snap_check/screens/leaves_list_screen.dart';
 import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/screens/setting_screen.dart';
@@ -40,6 +41,7 @@ class MyApp extends StatelessWidget {
         '/addDayLog': (context) => AddDayLogScreen(),
         '/userDetail': (context) => UserDetailScreen(),
         '/leaves': (context) => LeavesListScreen(),
+        '/leaveRequest': (context) => LeaveRequestScreen(),
       },
     );
   }

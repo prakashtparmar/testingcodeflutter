@@ -14,7 +14,7 @@ class LeavesDataModel {
   String? updatedAt;
   String? deletedAt;
   User? user;
-  LaveTypeModel? leaveType;
+  LeaveTypeModel? leaveType;
 
   LeavesDataModel({
     this.id,
@@ -47,7 +47,7 @@ class LeavesDataModel {
     user = json['user'] != null ? User.fromJson(json['user']) : null;
     leaveType =
         json['leave_type'] != null
-            ? LaveTypeModel.fromJson(json['leave_type'])
+            ? LeaveTypeModel.fromJson(json['leave_type'])
             : null;
   }
 

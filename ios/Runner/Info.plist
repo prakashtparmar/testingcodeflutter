@@ -4,6 +4,12 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>We need access to your camera to capture the vehicle meter&apos;s mileage for tracking purposes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need access to your location to capture the vehicle meter&apos;s mileage for tracking purposes.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need access to your location to capture the vehicle meter&apos;s mileage for tracking purposes.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>We need access to your location to capture the vehicle meter&apos;s mileage for tracking purposes.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

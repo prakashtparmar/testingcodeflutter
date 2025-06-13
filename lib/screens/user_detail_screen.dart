@@ -30,7 +30,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
 
   Future<void> _loadUser() async {
     final tokenData = await SharedPrefHelper.getToken();
-    debugPrint(tokenData);
     setState(() {
       _token = tokenData ?? "";
     });
@@ -42,14 +41,12 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
         _isLoading = true;
       });
       final response = await _authService.fetchUserDetail(_token!);
-      debugPrint(response?.message);
       setState(() {
         _user = response!.data!.user;
-        _isLoading = false;
       });
     } on UnauthorizedException {
-      SharedPrefHelper.clearUser(); // Optional: clear stored token
-      _redirectToLogin(); // Push + reset to login
+      SharedPrefHelper.clearUser();
+      _redirectToLogin();
     } on NotFoundException {
       _showError('User not found.');
     } on ServerErrorException {
@@ -57,8 +54,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Something went wrong.');
-      debugPrint(e.toString());
+      _showError('Something went wrong. $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -76,6 +72,20 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
+  String _getFullAddress() {
+    List<String?> parts =
+        [
+          _user?.addressLine1,
+          _user?.addressLine2,
+          _user?.taluka?.name,
+          _user?.city?.name,
+          _user?.state?.name,
+          _user?.country?.name,
+        ].where((e) => e != null && e.trim().isNotEmpty).toList();
+
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -86,105 +96,193 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       body:
           _isLoading || _user == null
               ? const Center(child: CircularProgressIndicator())
-              : Padding(
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: colorScheme.primary.withValues(
-                        alpha: (0.2 * 255),
+                    Card(
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.black54,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 32,
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: colorScheme.primary.withOpacity(
+                                0.2,
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "${_user?.firstName ?? ''} ${_user?.lastName ?? ''}"
+                                  .trim(),
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _user!.email ?? "",
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "${_user?.firstName ?? ''} ${_user?.lastName ?? ''}"
-                              .trim()
-                              .isEmpty
-                          ? ""
-                          : "${_user?.firstName ?? ''} ${_user?.lastName ?? ''}",
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 24),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _user!.email!,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
+                        ),
+                        child: Column(
+                          children: [
+                            if (_user?.designation?.name != null)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.supervised_user_circle,
+                                    size: 22,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Designation",
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        Text(
+                                          "${_user!.designation!.name}",
+                                          style: textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 15),
+                            if (_user?.manager?.firstName != null)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.verified_user,
+                                    size: 22,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Manager",
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        Text(
+                                          "${_user!.manager!.firstName} ${_user!.manager!.lastName}",
+                                          style: textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 15),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.male,
+                                  size: 22,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Gender",
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Text(
+                                        _user!.gender!,
+                                        style: textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 22,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Full Address",
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Text(
+                                        _getFullAddress(),
+                                        style: textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Divider(color: colorScheme.outlineVariant),
-                    _buildDetailRow(
-                      context,
-                      icon: Icons.location_on,
-                      label: "Address Line 1",
-                      value: _user!.addressLine1 ?? "",
-                    ),
-                    _buildDetailRow(
-                      context,
-                      icon: Icons.location_on,
-                      label: "Address Line 2",
-                      value: _user!.addressLine2 ?? "",
-                    ),
-                    _buildDetailRow(
-                      context,
-                      icon: Icons.location_city,
-                      label: "City",
-                      value: _user!.city?.name ?? "",
-                    ),
-                    _buildDetailRow(
-                      context,
-                      icon: Icons.landscape,
-                      label: "State",
-                      value: _user!.state?.name ?? "",
-                    ),
-                    _buildDetailRow(
-                      context,
-                      icon: Icons.flag,
-                      label: "Country",
-                      value: _user!.country?.name ?? "",
                     ),
                   ],
                 ),
               ),
-    );
-  }
-
-  Widget _buildDetailRow(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                ),
-                Text(value, style: textTheme.bodyLarge),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

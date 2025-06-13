@@ -76,7 +76,7 @@ class _LeavesListScreenState extends State<LeavesListScreen> {
   }
 
   void _navigateToAddLog() {
-    Navigator.pushNamed(context, '/addDayLog');
+    Navigator.pushNamed(context, '/leaveRequest');
   }
 
   @override
