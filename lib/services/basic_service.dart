@@ -80,7 +80,11 @@ class BasicService extends Service {
     final uri = Uri.parse(apiDayLogs);
     final request = http.MultipartRequest('POST', uri);
     // Set headers (note: Content-Type will be set automatically)
-    request.headers.addAll({"Authorization": "Bearer $token"});
+    request.headers.addAll({
+      "Authorization": "Bearer $token",
+      "Accept": "application/json",
+      "Content-type": "application/json",
+    });
     // Add text fields (like date, place, km, etc.)
     request.fields.addAll(fields);
     // Add image file (optional)
@@ -95,9 +99,9 @@ class BasicService extends Service {
     }
     // Send the request
     final response = await request.send();
-    debugPrint(response.stream.bytesToString().toString());
-    final responseString = await response.stream.bytesToString();
 
+    final responseString = await response.stream.bytesToString();
+    debugPrint(responseString.toString());
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
   }
 
