@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:snap_check/models/login_response_model.dart';
+import 'package:snap_check/models/register_response_model.dart';
 import 'package:snap_check/models/user_model.dart';
 import 'package:snap_check/models/user_response_model.dart';
 import 'package:snap_check/services/api_exception.dart';
@@ -25,9 +26,10 @@ class AuthService extends Service {
     return LoginResponseModel.fromJson(jsonDecode(response.body));
   }
 
-  Future<User?> registerWithEmailPassword({
+  Future<RegisterResponseModel> registerWithEmailPassword({
     required String email,
     required String password,
+    required String passwordConfirmation,
     required String firstName,
     required String lastName,
     required String addressLine1,
@@ -46,6 +48,7 @@ class AuthService extends Service {
       body: jsonEncode({
         'email': email,
         'password': password,
+        'password_confirmation': passwordConfirmation,
         'first_name': firstName,
         'last_name': lastName,
         'address_line_1': addressLine1,
@@ -57,7 +60,7 @@ class AuthService extends Service {
       }),
     );
 
-    return User.fromJson(_handleResponse(response));
+    return RegisterResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<void> sendPasswordResetEmail(String email) async {

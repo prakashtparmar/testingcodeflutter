@@ -55,17 +55,18 @@ class Errors {
   });
 
   Errors.fromJson(Map<String, dynamic> json) {
-    firstName = json['first_name'].cast<String>();
-    lastName = json['last_name'].cast<String>();
-    addressLine1 = json['address_line_1'].cast<String>();
-    addressLine2 = json['address_line_2'].cast<String>();
-    talukaId = json['taluka_id'].cast<String>();
-    cityId = json['city_id'].cast<String>();
-    stateId = json['state_id'].cast<String>();
-    countryId = json['country_id'].cast<String>();
-    email = json['email'].cast<String>();
-    password = json['password'].cast<String>();
-    passwordConfirmation = json['password_confirmation'].cast<String>();
+    firstName = (json['first_name'] as List?)?.cast<String>();
+    lastName = (json['last_name'] as List?)?.cast<String>();
+    addressLine1 = (json['address_line_1'] as List?)?.cast<String>();
+    addressLine2 = (json['address_line_2'] as List?)?.cast<String>();
+    talukaId = (json['taluka_id'] as List?)?.cast<String>();
+    cityId = (json['city_id'] as List?)?.cast<String>();
+    stateId = (json['state_id'] as List?)?.cast<String>();
+    countryId = (json['country_id'] as List?)?.cast<String>();
+    email = (json['email'] as List?)?.cast<String>();
+    password = (json['password'] as List?)?.cast<String>();
+    passwordConfirmation =
+        (json['password_confirmation'] as List?)?.cast<String>();
   }
 
   Map<String, dynamic> toJson() {
@@ -82,5 +83,32 @@ class Errors {
     data['password'] = password;
     data['password_confirmation'] = passwordConfirmation;
     return data;
+  }
+
+  /// 🔥 Combine all error messages into one string
+  String getAllMessages() {
+    final List<String> allErrors = [];
+
+    final List<List<String>?> fields = [
+      firstName,
+      lastName,
+      addressLine1,
+      addressLine2,
+      talukaId,
+      cityId,
+      stateId,
+      countryId,
+      email,
+      password,
+      passwordConfirmation,
+    ];
+
+    for (var field in fields) {
+      if (field != null) {
+        allErrors.addAll(field);
+      }
+    }
+
+    return allErrors.join('\n'); // You can also use ", " if you prefer inline
   }
 }
