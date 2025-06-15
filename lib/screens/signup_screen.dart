@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snap_check/models/city_model.dart';
 import 'package:snap_check/models/country_model.dart';
 import 'package:snap_check/models/state_model.dart';
+import 'package:snap_check/models/taluka_model.dart';
 import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/services/basic_service.dart';
 import '../services/auth_service.dart';
@@ -24,12 +25,14 @@ class _SignupScreenState extends State<SignupScreen> {
   CountryModel? _selectedCountry;
   StateModel? _selectedState;
   CityModel? _selectedCity;
+  TalukaModel? _selectedTaluko;
   bool _loadingTourDetails = true;
 
   // Sample data - replace with API fetched list in real app
   List<CountryModel> _countries = [];
   List<StateModel> _states = [];
   List<CityModel> _cities = [];
+  List<TalukaModel> _talukas = [];
 
   final AuthService _authService = AuthService();
   final BasicService _basicService = BasicService();
@@ -50,6 +53,7 @@ class _SignupScreenState extends State<SignupScreen> {
           _countries = response.data!;
           _states = response.data!.first.states!;
           _cities = response.data!.first.states!.first.cities!;
+          _talukas = response.data!.first.states!.first.cities!.first.talukas!;
         });
       }
     } catch (e) {
@@ -72,19 +76,23 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     try {
-      final user = await _authService.registerWithEmailPassword(
+      final response = await _authService.registerWithEmailPassword(
         email: _emailController.text,
         password: _passwordController.text,
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
         addressLine1: _address1Controller.text,
         addressLine2: _address2Controller.text,
+        talukaId: _selectedTaluko!.id!,
         cityId: _selectedCity!.id!,
         stateId: _selectedState!.id!,
         countryId: _selectedCountry!.id!,
       );
       if (!mounted) return;
-      if (user != null) {
+      if (response != null) {
+        if (condition) {
+          
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -230,7 +238,32 @@ class _SignupScreenState extends State<SignupScreen> {
                   labelText: 'City',
                   prefixIcon: Icon(Icons.location_city),
                 ),
-                onChanged: (value) => setState(() => _selectedCity = value),
+                onChanged:
+                    (value) => setState(() {
+                      _selectedCity = value;
+                      _talukas = value!.talukas!;
+                      _selectedTaluko = null;
+                    }),
+              ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<TalukaModel>(
+                isExpanded: true, // ✅ Important fix
+
+                value: _selectedTaluko,
+                items:
+                    _talukas.where((c) => c.cityId == _selectedCity?.id).map((
+                      taluka,
+                    ) {
+                      return DropdownMenuItem(
+                        value: taluka,
+                        child: Text(taluka.name ?? ''),
+                      );
+                    }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Taluko',
+                  prefixIcon: Icon(Icons.location_city),
+                ),
+                onChanged: (value) => setState(() => _selectedTaluko = value),
               ),
               const SizedBox(height: 20),
 

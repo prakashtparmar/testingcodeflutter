@@ -15,7 +15,10 @@ class AuthService extends Service {
   ) async {
     final response = await http.post(
       Uri.parse(apiLogin),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       body: jsonEncode({'email': email, 'password': password}),
     );
     debugPrint(response.body);
@@ -29,14 +32,29 @@ class AuthService extends Service {
     required String lastName,
     required String addressLine1,
     required String addressLine2,
+    required int talukaId,
     required int cityId,
     required int stateId,
     required int countryId,
   }) async {
     final response = await http.post(
       Uri.parse(apiRegister),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'first_name': firstName,
+        'last_name': lastName,
+        'address_line_1': addressLine1,
+        'address_line_2': addressLine2,
+        'taluka_id': talukaId,
+        'city_id': cityId,
+        'state_id': stateId,
+        'country_id': countryId,
+      }),
     );
 
     return User.fromJson(_handleResponse(response));
@@ -45,7 +63,10 @@ class AuthService extends Service {
   Future<void> sendPasswordResetEmail(String email) async {
     final response = await http.post(
       Uri.parse(apiResetPassword),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       body: jsonEncode({'email': email}),
     );
 
@@ -62,6 +83,7 @@ class AuthService extends Service {
       Uri.parse(apiLogout),
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
     );
@@ -77,7 +99,11 @@ class AuthService extends Service {
   Future<UserResponseModel?> fetchUserDetail(String token) async {
     final response = await http.post(
       Uri.parse(apiUserDetail),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
     );
 
     return UserResponseModel.fromJson(_handleResponse(response));
@@ -85,11 +111,13 @@ class AuthService extends Service {
 
   // Common response handler
   dynamic _handleResponse(http.Response response) {
+    debugPrint('Response URL: ${response.request!.url.path}');
     debugPrint('Response status: ${response.statusCode}');
     debugPrint('Response body: ${response.body}');
 
     switch (response.statusCode) {
       case 200:
+      case 422:
         return jsonDecode(response.body);
 
       case 401:

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/models/day_log_detail_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
@@ -42,38 +41,18 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
   CameraPosition? _initialCameraPosition;
   String? notes;
+  bool _permissionsGranted = false;
+  bool _loadingPermissions = true;
 
   // Before: Widget initialized
   @override
   void initState() {
     super.initState();
-    debugPrint("logId ${widget.logId}");
-    _fetchDayLogDetail(); // Fetch detail info about the log
-    // _startTracking(); // Start location tracking timer
+    _checkAndRequestPermissions();
+    _fetchDayLogDetail();
   }
-  // After: Widget initialized and tracking started
 
-  // After: Custom marker icon loaded
-
-  // Before: Fetch day log detail from API using token
-  Future<void> _fetchDayLogDetail() async {
-    final tokenData = await SharedPrefHelper.getToken();
-    final logDetail = await BasicService().getDayLogDetail(
-      tokenData!,
-      widget.logId,
-    );
-
-    if (logDetail != null) {
-      setState(() {
-        _token = tokenData;
-        dayLogDetailModel = logDetail.data;
-      });
-    }
-  }
-  // After: Day log detail fetched and set to state
-
-  // Before: Start periodic location tracking and update map markers/routes
-  void _startTracking() async {
+  Future<void> _checkAndRequestPermissions() async {
     LocationPermission permission = await Geolocator.requestPermission();
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -99,7 +78,41 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       );
       return;
     }
+    final position = await Geolocator.getCurrentPosition();
+    final latLng = LatLng(position.latitude, position.longitude);
 
+    // Permissions granted ✅
+    setState(() {
+      _permissionsGranted = true;
+      _loadingPermissions = false;
+      _initialCameraPosition = CameraPosition(
+        target: latLng,
+        zoom: _zoomLevel,
+        tilt: _tilt,
+        bearing: _bearing,
+      );
+    });
+  }
+
+  // Before: Fetch day log detail from API using token
+  Future<void> _fetchDayLogDetail() async {
+    final tokenData = await SharedPrefHelper.getToken();
+    final logDetail = await BasicService().getDayLogDetail(
+      tokenData!,
+      widget.logId,
+    );
+
+    if (logDetail != null) {
+      setState(() {
+        _token = tokenData;
+        dayLogDetailModel = logDetail.data;
+      });
+    }
+  }
+  // After: Day log detail fetched and set to state
+
+  // Before: Start periodic location tracking and update map markers/routes
+  void _startTracking() async {
     // Start listening to position updates
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -130,40 +143,19 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           "longitude": latLng.longitude,
         });
 
-        if (!_isFirstLocationCaptured) {
-          _initialCameraPosition = CameraPosition(
-            target: latLng,
-            zoom: _zoomLevel,
-            tilt: _tilt,
-            bearing: _bearing,
-          );
+        _movingMarker = Marker(
+          markerId: const MarkerId('currentLocation'),
+          position: latLng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+          infoWindow: const InfoWindow(title: "Current Location"),
+        );
 
-          _markers.add(
-            Marker(
-              markerId: const MarkerId('startLocation'),
-              position: latLng,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueRed,
-              ),
-              infoWindow: const InfoWindow(title: "Start Location"),
-            ),
-          );
+        _markers
+          ..removeWhere((m) => m.markerId.value == 'currentLocation')
+          ..add(_movingMarker!);
 
-          _isFirstLocationCaptured = true;
-        } else {
-          _movingMarker = Marker(
-            markerId: const MarkerId('currentLocation'),
-            position: latLng,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure,
-            ),
-            infoWindow: const InfoWindow(title: "Current Location"),
-          );
-
-          _markers
-            ..removeWhere((m) => m.markerId.value == 'currentLocation')
-            ..add(_movingMarker!);
-        }
         _sendLocationsToServer();
         _isTracking = true;
       });
@@ -328,11 +320,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       return;
     }
 
-    showDialog(
-      context: rootContext,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    // showDialog(
+    //   context: rootContext,
+    //   barrierDismissible: false,
+    //   builder: (_) => const Center(child: CircularProgressIndicator()),
+    // );
 
     try {
       final formData = {
@@ -349,7 +341,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         formData,
       );
 
-      Navigator.of(rootContext).pop(); // Hide loading dialog
+      // Navigator.of(rootContext).pop(); // Hide loading dialog
 
       if (response?.success == true) {
         _locationTimer?.cancel();
@@ -375,15 +367,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     }
   }
 
-  // After: Checkout submitted or error shown
-
-  // Before: Open camera to pick closing image
-  Future<void> _pickClosingImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      setState(() => closingImageFile = picked);
-    }
-  }
   // After: Closing image picked and state updated
 
   // Before: Confirm discard tracking dialog when back pressed
@@ -415,6 +398,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   // Before: Build UI with Google Map and checkout form
   @override
   Widget build(BuildContext context) {
+    if (_loadingPermissions) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (!_permissionsGranted) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Location permission is required to continue.'),
+        ),
+      );
+    }
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -427,25 +421,21 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         body: Column(
           children: [
             Expanded(
-              child:
-                  _initialCameraPosition == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : GoogleMap(
-                        initialCameraPosition: _initialCameraPosition!,
-                        polylines: {
-                          Polyline(
-                            polylineId: const PolylineId('route'),
-                            color: Colors.blue,
-                            width: 5,
-                            points: _routePoints,
-                          ),
-                        },
-                        markers: _markers,
-                        onMapCreated:
-                            (controller) => _mapController = controller,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
-                      ),
+              child: GoogleMap(
+                initialCameraPosition: _initialCameraPosition!,
+                polylines: {
+                  Polyline(
+                    polylineId: const PolylineId('route'),
+                    color: Colors.blue,
+                    width: 5,
+                    points: _routePoints,
+                  ),
+                },
+                markers: _markers,
+                onMapCreated: (controller) => _mapController = controller,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(16),

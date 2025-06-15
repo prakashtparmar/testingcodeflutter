@@ -1,3 +1,5 @@
+import 'package:snap_check/models/taluka_model.dart';
+
 class CityModel {
   int? id;
   String? name;
@@ -5,6 +7,7 @@ class CityModel {
   String? createdAt;
   String? updatedAt;
   String? deletedAt;
+  List<TalukaModel>? talukas;
 
   CityModel({
     this.id,
@@ -22,6 +25,12 @@ class CityModel {
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     deletedAt = json['deleted_at'];
+    if (json['talukas'] != null) {
+      talukas = <TalukaModel>[];
+      json['talukas'].forEach((v) {
+        talukas!.add(TalukaModel.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -32,6 +41,9 @@ class CityModel {
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
     data['deleted_at'] = deletedAt;
+    if (talukas != null) {
+      data['talukas'] = talukas!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
 }

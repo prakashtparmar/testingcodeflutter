@@ -1,53 +1,69 @@
 class PostDayLogDataModel {
-  String? tourPurposeId;
-  String? vehicleTypeId;
-  String? tourTypeId;
+  int? id;
+  int? tourPurposeId;
+  int? vehicleTypeId;
+  int? tourTypeId;
+  int? partyId;
   String? placeVisit;
   String? openingKm;
   String? openingKmImage;
-  String? partyId;
-  String? updatedAt;
+  String? closingKm;
+  String? closingKmImage;
+  String? note;
   String? createdAt;
-  int? id;
+  String? updatedAt;
+  String? deletedAt;
 
   PostDayLogDataModel({
+    this.id,
     this.tourPurposeId,
     this.vehicleTypeId,
     this.tourTypeId,
+    this.partyId,
     this.placeVisit,
     this.openingKm,
     this.openingKmImage,
-    this.partyId,
-    this.updatedAt,
+    this.closingKm,
+    this.closingKmImage,
+    this.note,
     this.createdAt,
-    this.id,
+    this.updatedAt,
+    this.deletedAt,
   });
 
   PostDayLogDataModel.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
     tourPurposeId = json['tour_purpose_id'];
     vehicleTypeId = json['vehicle_type_id'];
     tourTypeId = json['tour_type_id'];
+    partyId = json['party_id'];
     placeVisit = json['place_visit'];
     openingKm = json['opening_km'];
     openingKmImage = json['opening_km_image'];
-    partyId = json['party_id'];
-    updatedAt = json['updated_at'];
+    closingKm = json['closing_km'];
+    closingKmImage = json['closing_km_image'];
+    note = json['note'];
     createdAt = json['created_at'];
-    id = json['id'];
+    updatedAt = json['updated_at'];
+    deletedAt = json['deleted_at'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
     data['tour_purpose_id'] = tourPurposeId;
     data['vehicle_type_id'] = vehicleTypeId;
     data['tour_type_id'] = tourTypeId;
+    data['party_id'] = partyId;
     data['place_visit'] = placeVisit;
     data['opening_km'] = openingKm;
     data['opening_km_image'] = openingKmImage;
-    data['party_id'] = partyId;
-    data['updated_at'] = updatedAt;
+    data['closing_km'] = closingKm;
+    data['closing_km_image'] = closingKmImage;
+    data['note'] = note;
     data['created_at'] = createdAt;
-    data['id'] = id;
+    data['updated_at'] = updatedAt;
+    data['deleted_at'] = deletedAt;
     return data;
   }
 }
