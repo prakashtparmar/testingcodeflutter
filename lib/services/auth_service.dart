@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:snap_check/models/change_password_response_model.dart';
 import 'package:snap_check/models/login_response_model.dart';
 import 'package:snap_check/models/register_response_model.dart';
 import 'package:snap_check/models/user_response_model.dart';
@@ -144,6 +145,29 @@ class AuthService extends Service {
     );
 
     return UserResponseModel.fromJson(_handleResponse(response));
+  }
+
+  Future<ChangePasswordResponseModel> postChangePassword({
+    required String token,
+    required String oldPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final response = await http.post(
+      Uri.parse(apiChangePassword),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'current_password': oldPassword,
+        'new_password': password,
+        'new_password_confirmation': passwordConfirmation,
+      }),
+    );
+
+    return ChangePasswordResponseModel.fromJson(_handleResponse(response));
   }
 
   // Common response handler

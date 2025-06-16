@@ -214,7 +214,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  void _signup() async {
+  void _editProfile() async {
     if (!_formKey.currentState!.validate()) {
       return; // Show validation errors
     }
@@ -485,7 +485,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _signup,
+                        onPressed: _editProfile,
                         child: const Text("Submit"),
                       ),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/screens/add_day_log_screen.dart';
+import 'package:snap_check/screens/change_password.dart';
 import 'package:snap_check/screens/day_log_list_screen.dart';
 import 'package:snap_check/screens/edit_profile_screen.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/leaves': (context) => LeavesListScreen(),
         '/leaveRequest': (context) => LeaveRequestScreen(),
         '/editProfile': (context) => EditProfileScreen(),
+        '/changePassword': (context) => ChangePasswordScreen(),
       },
     );
   }

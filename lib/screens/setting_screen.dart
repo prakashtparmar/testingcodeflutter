@@ -37,16 +37,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     //   title: 'Language',
     //   onTapMessage: 'Language tapped',
     // ),
-    // _SettingItem(
-    //   icon: Icons.palette_outlined,
-    //   title: 'Appearance',
-    //   onTapMessage: 'Appearance tapped',
-    // ),
+    _SettingItem(
+      icon: Icons.security,
+      title: 'Change Password',
+      onTapMessage: 'Change Password tapped',
+      route: "/changePassword",
+    ),
     _SettingItem(
       icon: Icons.logout,
       title: 'Logout',
       onTapMessage: 'Logout tapped',
       isLogout: true,
+      route: "/",
     ),
   ];
 
@@ -54,6 +56,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadUser();
+  }
+
+  void _navigationRoutes(BuildContext context, String routeName) {
+    Navigator.pushNamed(context, routeName);
   }
 
   Future<void> _loadUser() async {
@@ -115,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () {
                             item.isLogout
                                 ? _confirmLogout(context)
-                                : _showSnackBar(context, item.onTapMessage);
+                                : _navigationRoutes(context, item.route);
                           },
                           child: Card(
                             elevation: 4,
@@ -202,12 +208,14 @@ class _SettingItem {
   final IconData icon;
   final String title;
   final String onTapMessage;
+  final String route;
   final bool isLogout;
 
   _SettingItem({
     required this.icon,
     required this.title,
     required this.onTapMessage,
+    required this.route,
     this.isLogout = false,
   });
 }
