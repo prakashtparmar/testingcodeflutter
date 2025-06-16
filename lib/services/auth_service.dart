@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:snap_check/models/login_response_model.dart';
 import 'package:snap_check/models/register_response_model.dart';
-import 'package:snap_check/models/user_model.dart';
 import 'package:snap_check/models/user_response_model.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/service.dart';
@@ -112,9 +111,45 @@ class AuthService extends Service {
     return UserResponseModel.fromJson(_handleResponse(response));
   }
 
+  Future<UserResponseModel> postUserDetail({
+    required String token,
+    required String firstName,
+    required String lastName,
+    required String addressLine1,
+    required String addressLine2,
+    required int talukaId,
+    required int cityId,
+    required int stateId,
+    required int countryId,
+    required String? gender,
+  }) async {
+    final response = await http.put(
+      Uri.parse(apiUserDetail),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'first_name': firstName,
+        'last_name': lastName,
+        'address_line_1': addressLine1,
+        'address_line_2': addressLine2,
+        'taluka_id': talukaId,
+        'city_id': cityId,
+        'state_id': stateId,
+        'country_id': countryId,
+        'gender': gender,
+      }),
+    );
+
+    return UserResponseModel.fromJson(_handleResponse(response));
+  }
+
   // Common response handler
   dynamic _handleResponse(http.Response response) {
     debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response Method: ${response.request!.method}');
     debugPrint('Response status: ${response.statusCode}');
     debugPrint('Response body: ${response.body}');
 
