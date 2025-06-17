@@ -181,13 +181,13 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                           children: [
                             _infoRow(
                               icon: Icons.supervised_user_circle,
-                              title: "Designation",
+                              title: "Your Designation",
                               value: _user?.designation?.name ?? 'N/A',
                             ),
                             const Divider(height: 30),
                             _infoRow(
                               icon: Icons.verified_user,
-                              title: "Manager",
+                              title: "Reporting to",
                               value:
                                   "${_user?.manager?.firstName ?? ''} ${_user?.manager?.lastName ?? ''}"
                                       .trim(),
