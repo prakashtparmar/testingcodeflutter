@@ -4,6 +4,7 @@ import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
+import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
@@ -29,7 +30,6 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   List<TourDetails> vehicleTypes = [];
   List<TourDetails> tourTypes = [];
   List<PartyUsersDataModel> parties = [];
-  String? _token;
 
   TourDetails? selectedPurpose;
   TourDetails? selectedVehicle;
@@ -58,20 +58,16 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     _loadingTourDetails = true;
     _loadingParties = true;
     _loadingLocation = true;
-    final tokenData = await SharedPrefHelper.getToken();
-
-    setState(() {
-      _token = tokenData ?? "";
-    });
     await _fetchTourDetails();
     _getCurrentLocation();
   }
 
   Future<void> _fetchTourDetails() async {
     try {
+      final tokenData = await SharedPrefHelper.getToken();
       setState(() => _loadingTourDetails = true);
 
-      final response = await _basicService.getTourDetails(_token!);
+      final response = await _basicService.getTourDetails(tokenData!);
       if (response != null && response.data != null) {
         setState(() {
           tourPurposes = response.data!.tourPurposes!;
@@ -84,19 +80,45 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
         });
         _fetchPartyUsers();
       } else {
-        setState(() => _loadingTourDetails = false);
+        setState(() {
+          _loadingTourDetails = false;
+          _loadingParties = false;
+          _loadingLocation = false;
+        });
       }
     } catch (e) {
-      debugPrint('Error fetching tour details: $e');
-      setState(() => _loadingTourDetails = false);
+      if (e is UnauthorizedException) {
+        setState(() {
+          _loadingTourDetails = false;
+          _loadingParties = false;
+          _loadingLocation = false;
+        });
+        SharedPrefHelper.clearUser();
+        _redirectToLogin();
+      } else {
+        setState(() {
+          _loadingTourDetails = false;
+          _loadingParties = false;
+          _loadingLocation = false;
+        });
+      }
     } finally {
-      setState(() => _loadingTourDetails = false);
+      setState(() {
+        _loadingTourDetails = false;
+        _loadingParties = false;
+        _loadingLocation = false;
+      });
     }
+  }
+
+  void _redirectToLogin() {
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   Future<void> _fetchPartyUsers() async {
     try {
-      final response = await _basicService.getPartyUsers(_token!);
+      final tokenData = await SharedPrefHelper.getToken();
+      final response = await _basicService.getPartyUsers(tokenData!);
       if (response != null && response.data != null) {
         setState(() {
           parties = response.data!;
@@ -167,7 +189,11 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     } catch (e) {
       debugPrint('Location error: $e');
     } finally {
-      setState(() => _loadingLocation = false);
+      if (mounted) {
+        setState(() {
+          setState(() => _loadingLocation = false);
+        });
+      }
     }
   }
 
@@ -397,6 +423,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   }
 
   void _submitForm() async {
+    final tokenData = await SharedPrefHelper.getToken();
     if (_formKey.currentState?.validate() != true || imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -421,8 +448,9 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
       formData["party_id"] =
           selectedParty!.id.toString(); // assumes `selectedParty` is defined
     }
+
     PostDayLogsResponseModel? postDayLogsResponseModel = await _basicService
-        .postDayLog(_token!, imageFile, formData);
+        .postDayLog(tokenData!, imageFile, formData);
     if (postDayLogsResponseModel != null &&
         postDayLogsResponseModel.success == true) {
       if (!mounted) {

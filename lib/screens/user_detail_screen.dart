@@ -92,18 +92,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("User Details"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.pushNamed(context, "/editProfile");
-            },
-            tooltip: 'Edit',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text("User Details")),
       body:
           _isLoading || _user == null
               ? const Center(child: CircularProgressIndicator())

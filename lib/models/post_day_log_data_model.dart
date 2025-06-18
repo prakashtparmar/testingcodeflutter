@@ -1,8 +1,8 @@
 class PostDayLogDataModel {
   int? id;
-  int? tourPurposeId;
-  int? vehicleTypeId;
-  int? tourTypeId;
+  String? tourPurposeId;
+  String? vehicleTypeId;
+  String? tourTypeId;
   int? partyId;
   String? placeVisit;
   String? openingKm;

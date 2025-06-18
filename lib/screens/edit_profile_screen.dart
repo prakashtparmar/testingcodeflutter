@@ -247,7 +247,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _isLoading = false);
       if (!mounted) return;
       if (response.data != null) {
-        Navigator.pop(context);
+        SharedPrefHelper.saveUser(response.data!.user);
+        Navigator.pop(context, true); // Return true on success
       } else {
         final allMessages = response.message;
 

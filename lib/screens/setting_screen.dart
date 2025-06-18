@@ -88,24 +88,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   if (_user != null) ...[
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const CircleAvatar(
                           radius: 28,
                           child: Icon(Icons.person),
                         ),
                         const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _name ?? "",
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(
-                              _email ?? "",
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _name ?? "",
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.visibility),
+                                    tooltip: 'View Profile',
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/userDetail',
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    tooltip: 'Edit Profile',
+                                    onPressed: () async {
+                                      final result = await Navigator.pushNamed(
+                                        context,
+                                        '/editProfile',
+                                      );
+                                      if (result == true) {
+                                        _loadUser(); // Refresh if edited
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                _email ?? "",
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

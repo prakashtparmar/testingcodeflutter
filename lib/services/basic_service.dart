@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
+import 'package:snap_check/models/leave_request_response_model.dart';
 import 'package:snap_check/models/leave_types_response_model.dart';
 import 'package:snap_check/models/leaves_response_model.dart';
 import 'package:snap_check/models/locations_response_model.dart';
@@ -38,11 +39,7 @@ class BasicService extends Service {
       },
     );
 
-    if (response.statusCode == 200) {
-      return TourDetailsResponseModel.fromJson(_handleResponse(response));
-    } else {
-      throw Exception(response.body);
-    }
+    return TourDetailsResponseModel.fromJson(_handleResponse(response));
   }
 
   Future<DayLogResponseModel?> getDayLogs(String token) async {
@@ -192,8 +189,26 @@ class BasicService extends Service {
     return LeaveTypeResponseModel.fromJson(_handleResponse(response));
   }
 
+  Future<LeaveRequestResponseModel?> postLeaveRequest(
+    String token,
+    Map<String, Object> body,
+  ) async {
+    final response = await http.post(
+      Uri.parse(apiLeaveRequest),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    return LeaveRequestResponseModel.fromJson(_handleResponse(response));
+  }
+
   dynamic _handleResponse(http.Response response) {
     debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response Headers: ${response.request!.headers.values}');
     debugPrint('Response status: ${response.statusCode}');
     debugPrint('Response body: ${response.body}');
 

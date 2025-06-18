@@ -173,6 +173,7 @@ class AuthService extends Service {
   // Common response handler
   dynamic _handleResponse(http.Response response) {
     debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response Headers: ${response.request!.headers.values}');
     debugPrint('Response Method: ${response.request!.method}');
     debugPrint('Response status: ${response.statusCode}');
     debugPrint('Response body: ${response.body}');

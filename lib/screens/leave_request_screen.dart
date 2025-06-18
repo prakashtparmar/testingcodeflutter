@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snap_check/models/leave_request_response_model.dart';
 import 'package:snap_check/models/leave_type_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
@@ -268,25 +269,24 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       "reason": reason!,
     };
 
-    // PostDayLogsResponseModel? postDayLogsResponseModel = await _basicService
-    //     .postDayLog(_token!, imageFile, formData);
-    // if (postDayLogsResponseModel != null &&
-    //     postDayLogsResponseModel.success == true) {
-    //   if (!mounted) {
-    //     return;
-    //   }
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text(postDayLogsResponseModel.message!)),
-    //   );
-    //   Navigator.pop(context);
-    // } else if (postDayLogsResponseModel != null &&
-    //     postDayLogsResponseModel.success == false) {
-    //   if (!mounted) {
-    //     return;
-    //   }
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text(postDayLogsResponseModel.message!)),
-    //   );
-    // }
+    LeaveRequestResponseModel? leaveRequestResponse = await _basicService
+        .postLeaveRequest(_token!, formData);
+    if (leaveRequestResponse != null && leaveRequestResponse.success == true) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(leaveRequestResponse.message!)));
+      Navigator.pop(context, true);
+    } else if (leaveRequestResponse != null &&
+        leaveRequestResponse.success == false) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(leaveRequestResponse.message!)));
+    }
   }
 }

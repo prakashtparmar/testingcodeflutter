@@ -17,18 +17,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: GestureDetector(
-              onTap: () {
-                _navigationRoutes(context, "/userDetail");
-              },
-              child: CircleAvatar(
-                backgroundColor: Colors.grey.shade300,
-                child: Icon(Icons.person, color: Colors.black87),
-              ),
-            ),
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {

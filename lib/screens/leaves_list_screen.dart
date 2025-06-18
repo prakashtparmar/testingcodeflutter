@@ -75,8 +75,11 @@ class _LeavesListScreenState extends State<LeavesListScreen> {
     super.dispose();
   }
 
-  void _navigateToAddLog() {
-    Navigator.pushNamed(context, '/leaveRequest');
+  void _navigateToAddLog() async {
+    var result = await Navigator.pushNamed(context, '/leaveRequest');
+    if (result == true) {
+      _fetchMyLeaves();
+    }
   }
 
   @override
