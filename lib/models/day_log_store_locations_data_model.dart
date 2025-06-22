@@ -1,4 +1,5 @@
 class DayLogStoreLocationsDataModel {
+  int? id;
   int? dayLogId;
   double? latitude;
   double? longitude;
@@ -6,6 +7,7 @@ class DayLogStoreLocationsDataModel {
   String? updatedAt;
 
   DayLogStoreLocationsDataModel({
+    this.id,
     this.dayLogId,
     this.latitude,
     this.longitude,
@@ -14,6 +16,7 @@ class DayLogStoreLocationsDataModel {
   });
 
   DayLogStoreLocationsDataModel.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
     dayLogId = json['day_log_id'];
     latitude = json['latitude'];
     longitude = json['longitude'];
@@ -23,6 +26,7 @@ class DayLogStoreLocationsDataModel {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
     data['day_log_id'] = dayLogId;
     data['latitude'] = latitude;
     data['longitude'] = longitude;

@@ -3,12 +3,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
+import 'package:snap_check/models/tour_details_response_model.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/services/database_helper.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:snap_check/staticdata/tour_details.dart';
 
 class AddDayLogScreen extends StatefulWidget {
   const AddDayLogScreen({super.key});
@@ -18,11 +21,12 @@ class AddDayLogScreen extends StatefulWidget {
 }
 
 class _AddDayLogScreenState extends State<AddDayLogScreen> {
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   final BasicService _basicService = BasicService();
   final List<String> purposesWithParties = [
-    'Field Visit',
-    'Work from home',
-    'Office Visit',
+    'Field-Visit',
+    'Work-from-home',
+    'Office-Visit',
   ];
 
   // Dropdown items
@@ -64,10 +68,13 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
 
   Future<void> _fetchTourDetails() async {
     try {
-      final tokenData = await SharedPrefHelper.getToken();
+      final TourDetailsResponseModel response =
+          TourDetailsResponseModel.fromJson(tourDetailsStatic);
+
+      // final tokenData = await SharedPrefHelper.getToken();
       setState(() => _loadingTourDetails = true);
 
-      final response = await _basicService.getTourDetails(tokenData!);
+      // final response = await _basicService.getTourDetails(tokenData!);
       if (response != null && response.data != null) {
         setState(() {
           tourPurposes = response.data!.tourPurposes!;
@@ -78,7 +85,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           selectedVehicle = response.data!.vehicleTypes!.first;
           selectedTourType = response.data!.tourTypes!.first;
         });
-        _fetchPartyUsers();
+        // _fetchPartyUsers();
       } else {
         setState(() {
           _loadingTourDetails = false;
@@ -423,6 +430,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
   }
 
   void _submitForm() async {
+    final _userData = await SharedPrefHelper.loadUser();
     final tokenData = await SharedPrefHelper.getToken();
     if (_formKey.currentState?.validate() != true || imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -449,8 +457,19 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           selectedParty!.id.toString(); // assumes `selectedParty` is defined
     }
 
-    PostDayLogsResponseModel? postDayLogsResponseModel = await _basicService
-        .postDayLog(tokenData!, imageFile, formData);
+    PostDayLogsResponseModel? postDayLogsResponseModel = await _databaseHelper
+        .addDayLog(
+          _userData?.id,
+          selectedPurpose!.id,
+          selectedVehicle!.id,
+          selectedTourType!.id,
+          null,
+          placeVisited,
+          openingKm,
+          null,
+          currentPosition!.latitude,
+          currentPosition!.longitude,
+        );
     if (postDayLogsResponseModel != null &&
         postDayLogsResponseModel.success == true) {
       if (!mounted) {

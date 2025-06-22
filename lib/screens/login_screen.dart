@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
+import 'package:snap_check/screens/signup_screen_local.dart';
+import 'package:snap_check/services/database_helper.dart';
 import 'package:snap_check/services/share_pref.dart';
 import '../services/auth_service.dart';
 
@@ -21,14 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // Email validation function
-  bool _isValidEmail(String email) {
-    final emailRegex = RegExp(
-      r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-    );
-    return emailRegex.hasMatch(email);
-  }
-
   void _togglePasswordVisibility() {
     setState(() {
       _obscurePassword = !_obscurePassword;
@@ -42,10 +36,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final loginResponseModel = await _authService.signInWithEmailPassword(
+      final loginResponseModel = await DatabaseHelper().loginUser(
         _emailController.text,
         _passwordController.text,
       );
+
+      // final loginResponseModel = await _authService.signInWithEmailPassword(
+      //   _emailController.text,
+      //   _passwordController.text,
+      // );
       if (!mounted) return; // check if widget is still mounted
 
       if (loginResponseModel != null) {
@@ -64,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("_login ${e.toString()}");
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -183,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const SignupScreen(),
+                                builder: (_) => const SignupScreenLocal(),
                               ),
                             );
                           },

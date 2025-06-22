@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name="${applicationName}"
@@ -43,6 +45,14 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyB_-uOyQimLqBkDW_Vr8d88GX6Qk0lyksI" />
+        <service
+            android:name="com.transistorsoft.flutter.backgroundfetch.BackgroundFetchService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
