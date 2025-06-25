@@ -1,7 +1,7 @@
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/models/user_model.dart';
 
-class DayLogsDataModel {
+class ActiveDayLogDataModel {
   int? id;
   int? userId;
   int? tourPurposeId;
@@ -29,7 +29,7 @@ class DayLogsDataModel {
   TourDetails? vehicleType;
   TourDetails? tourType;
 
-  DayLogsDataModel({
+  ActiveDayLogDataModel({
     this.id,
     this.userId,
     this.tourPurposeId,
@@ -58,7 +58,7 @@ class DayLogsDataModel {
     this.tourType,
   });
 
-  DayLogsDataModel.fromJson(Map<String, dynamic> json) {
+  ActiveDayLogDataModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     userId = json['user_id'];
     tourPurposeId = json['tour_purpose_id'];
@@ -95,7 +95,6 @@ class DayLogsDataModel {
             ? TourDetails.fromJson(json['tour_type'])
             : null;
   }
-
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
-import 'package:snap_check/screens/signup_screen.dart';
-import 'package:snap_check/screens/signup_screen_local.dart';
-import 'package:snap_check/services/database_helper.dart';
 import 'package:snap_check/services/share_pref.dart';
 import '../services/auth_service.dart';
 
@@ -16,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _domainController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
@@ -36,15 +34,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final loginResponseModel = await DatabaseHelper().loginUser(
+      final loginResponseModel = await _authService.signInWithEmailPassword(
+        _domainController.text,
         _emailController.text,
         _passwordController.text,
       );
-
-      // final loginResponseModel = await _authService.signInWithEmailPassword(
-      //   _emailController.text,
-      //   _passwordController.text,
-      // );
       if (!mounted) return; // check if widget is still mounted
 
       if (loginResponseModel != null) {
@@ -63,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      debugPrint("_login ${e.toString()}");
+      debugPrint(e.toString());
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -96,6 +90,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _domainController,
+                      decoration: const InputDecoration(
+                        labelText: 'Domain',
+                        prefixIcon: Icon(Icons.domain),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
@@ -167,31 +169,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: Theme.of(context).elevatedButtonTheme.style,
                         child: Text("Login"),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Don't have an account? ",
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SignupScreenLocal(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            "Sign Up",
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),

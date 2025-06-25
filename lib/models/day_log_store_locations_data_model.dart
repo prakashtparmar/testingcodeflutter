@@ -1,6 +1,6 @@
 class DayLogStoreLocationsDataModel {
   int? id;
-  int? dayLogId;
+  String? dayLogId;
   double? latitude;
   double? longitude;
   String? createdAt;

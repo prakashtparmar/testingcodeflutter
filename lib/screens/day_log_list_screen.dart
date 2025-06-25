@@ -3,8 +3,8 @@ import 'package:intl/intl.dart'; // For date formatting
 import 'package:connectivity_plus/connectivity_plus.dart'; // For network checking
 import 'package:snap_check/models/day_logs_data_model.dart';
 import 'package:snap_check/screens/live_map_screen.dart';
+import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
-import 'package:snap_check/services/database_helper.dart';
 import 'package:snap_check/services/share_pref.dart';
 
 class DayLogsListScreen extends StatefulWidget {
@@ -68,28 +68,37 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
   // Fetch logs from API
   Future<void> _fetchDayLogs() async {
-    if (!mounted) return;
-
     setState(() => _isLoading = true);
 
     try {
-      final logs = await DatabaseHelper().getDayLogs();
+      final response = await _service.getDayLogs(_token!);
+      final logs = response?.data?.data ?? [];
 
-      if (!mounted) return;
       setState(() {
         _allLogs = logs;
         _filteredLogs = List.from(logs);
-        _error = null;
       });
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-      _showErrorSnackbar('Failed to load logs: ${e.toString()}');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+      if (e is UnauthorizedException) {
+        setState(() {
+          _isLoading = false;
+        });
+        SharedPrefHelper.clearUser();
+        _redirectToLogin();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
+
+  void _redirectToLogin() {
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   // Filter logs based on search query
@@ -157,20 +166,11 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Day Logs'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _fetchDayLogs(),
-            tooltip: 'Refresh logs',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Day Logs')),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddLog,
-        child: const Icon(Icons.add),
         tooltip: 'Add new log',
+        child: Icon(Icons.add),
       ),
       body: SafeArea(
         child: Padding(
@@ -266,7 +266,9 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    DateFormat('MMM dd, yyyy').format(DateTime.now()),
+                    DateFormat(
+                      'MMM dd, yyyy hh:mm a',
+                    ).format(DateTime.parse(log.createdAt!)),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.grey,
                     ),
@@ -297,7 +299,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
+                  child: ElevatedButton.icon(
                     icon: const Icon(Icons.directions_walk, size: 20),
                     label: const Text('Start Tracking'),
                     onPressed: () => _navigateToTracking(log),
@@ -377,17 +379,6 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
           Text(
             _isSearching ? 'No matching logs found' : 'No logs available',
             style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _isSearching
-                ? 'Try a different search term'
-                : 'Create your first log to get started',
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _navigateToAddLog,
-            child: Text(_isSearching ? 'Clear Search' : 'Create Log'),
           ),
         ],
       ),

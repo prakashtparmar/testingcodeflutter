@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:snap_check/models/active_day_log_response_model.dart';
+import 'package:snap_check/models/day_log_data_model.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
+import 'package:snap_check/models/day_logs_data_model.dart';
 import 'package:snap_check/models/leave_request_response_model.dart';
 import 'package:snap_check/models/leave_types_response_model.dart';
 import 'package:snap_check/models/leaves_response_model.dart';
@@ -159,7 +162,7 @@ class BasicService extends Service {
     // Send the request
     final response = await request.send();
     final responseString = await response.stream.bytesToString();
-
+    debugPrint(responseString);
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
   }
 
@@ -204,6 +207,19 @@ class BasicService extends Service {
     );
 
     return LeaveRequestResponseModel.fromJson(_handleResponse(response));
+  }
+
+  Future<ActiveDayLogResponseModel?> getActiveDayLog(String token) async {
+    final response = await http.get(
+      Uri.parse(apiActiveDayLog),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    return ActiveDayLogResponseModel.fromJson(_handleResponse(response));
   }
 
   dynamic _handleResponse(http.Response response) {

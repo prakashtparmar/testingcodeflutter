@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="true"
@@ -52,6 +52,13 @@
 
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+
+        <service
+            android:foregroundServiceType="location"
+            android:name="com.example.snap_check.FlutterBackgroundService"
+            android:enabled="true"
+            android:exported="false" />
+
 
     </application>
     <!-- Required to query activities that can process text, see:

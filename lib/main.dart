@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/screens/add_day_log_screen.dart';
 import 'package:snap_check/screens/change_password.dart';
+import 'package:snap_check/screens/checkout_day_log_screen.dart';
 import 'package:snap_check/screens/day_log_list_screen.dart';
 import 'package:snap_check/screens/edit_profile_screen.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
@@ -10,7 +11,6 @@ import 'package:snap_check/screens/leaves_list_screen.dart';
 import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
-import 'package:snap_check/screens/signup_screen_local.dart';
 import 'package:snap_check/screens/splash_screen.dart';
 import 'package:snap_check/screens/user_detail_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
@@ -37,7 +37,6 @@ class MyApp extends StatelessWidget {
         '/': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignupScreen(),
-        '/signupLocal': (context) => SignupScreenLocal(),
         '/forgot': (context) => ForgotPasswordScreen(),
         '/home': (context) => HomeScreen(),
         '/settings': (context) => SettingsScreen(),
@@ -48,6 +47,7 @@ class MyApp extends StatelessWidget {
         '/leaveRequest': (context) => LeaveRequestScreen(),
         '/editProfile': (context) => EditProfileScreen(),
         '/changePassword': (context) => ChangePasswordScreen(),
+        '/checkoutDayLog': (context) => CheckoutDayLogScreen(),
       },
     );
   }

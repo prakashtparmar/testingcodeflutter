@@ -4,8 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/day_log_detail_data_model.dart';
-import 'package:snap_check/screens/checkout_day_log.dart';
-import 'package:snap_check/services/database_helper.dart';
+import 'package:snap_check/screens/checkout_day_log_screen.dart';
+import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
 // Constants
@@ -122,24 +122,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   }
 
   Future<void> _fetchDayLogDetail() async {
-    try {
-      final tokenData = await SharedPrefHelper.getToken();
-      final logDetail = await DatabaseHelper().getDayLogById(widget.logId);
+    final tokenData = await SharedPrefHelper.getToken();
+    final logDetail = await BasicService().getDayLogDetail(
+      tokenData!,
+      widget.logId,
+    );
 
-      if (mounted) {
-        setState(() {
-          _token = tokenData;
-          dayLogDetailModel = logDetail?.data;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load log details: ${e.toString()}'),
-          ),
-        );
-      }
+    if (logDetail != null) {
+      setState(() {
+        _token = tokenData;
+        dayLogDetailModel = logDetail.data;
+      });
     }
   }
 
@@ -239,16 +232,16 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         "locations": _collectedLocations,
       };
 
-      final response = await DatabaseHelper().saveDayLogLocations(body);
+      final response = await BasicService().postDayLogLocations(_token!, body);
 
-      if (response?.success == true) {
-        _lastSendTime = DateTime.now();
-        _collectedLocations.clear();
+      if (response!.success == true) {
+        debugPrint("Location data sent successfully.");
+        _collectedLocations.clear(); // Clear after successful send
       } else {
-        debugPrint("Failed to send locations: ${response?.message}");
+        debugPrint("Failed to send location data: \${response.message}");
       }
     } catch (e) {
-      debugPrint("Location send error: $e");
+      debugPrint("Error sending location data: $e");
     }
   }
 
@@ -280,20 +273,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     _showCheckoutBottomSheet();
   }
 
-  void _showCheckoutBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder:
-          (context) => CheckoutBottomSheet(
-            formKey: _formKey,
-            onImageCaptured: (file) => closingImageFile = file,
-            onKmChanged: (km) => closingKm = km,
-            onNotesChanged: (text) => notes = text,
-            onSubmit: _submitCheckout,
-          ),
-    );
-  }
+  void _showCheckoutBottomSheet() {}
 
   Future<void> _submitCheckout(BuildContext context) async {
     if (!_validateCheckoutForm()) {
@@ -313,31 +293,41 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     );
 
     try {
-      final response = await DatabaseHelper().closeDayLog(
-        dayLogDetailModel?.id,
-        closingKm!,
-        currentPosition!.latitude,
-        currentPosition!.longitude,
-        closingImageFile?.path,
-        notes,
+      final formData = {
+        "day_log_id": "${dayLogDetailModel?.id ?? "0"}",
+        "closing_km": closingKm!,
+        "note": notes!,
+        "closing_km_latitude": currentPosition!.latitude.toString(),
+        "closing_km_longitude": currentPosition!.longitude.toString(),
+      };
+
+      final response = await BasicService().postCloseDay(
+        _token!,
+        closingImageFile,
+        formData,
       );
 
-      navigator.pop(); // Close loading dialog
+      // Navigator.of(rootContext).pop(); // Hide loading dialog
 
       if (response?.success == true) {
-        _cleanUpTracking();
-        navigator.pop(true); // Close LiveMapScreen
-        scaffold.showSnackBar(
+        _positionStream?.cancel();
+        setState(() => _isTracking = false);
+
+        Navigator.of(context).pop(true); // Close LiveMapScreen
+
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Checkout submitted successfully!')),
         );
       } else {
-        scaffold.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Submit failed: ${response?.message}')),
         );
       }
     } catch (e) {
-      navigator.pop(); // Close loading dialog
-      scaffold.showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      Navigator.of(context).pop(); // Hide loading
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 

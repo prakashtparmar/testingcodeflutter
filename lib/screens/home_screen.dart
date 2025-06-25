@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/constants/constants.dart';
+import 'package:snap_check/models/active_day_log_data_model.dart';
 import 'package:snap_check/screens/setting_screen.dart';
+import 'package:snap_check/services/api_exception.dart';
+import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/services/location_service.dart';
+import 'package:snap_check/services/share_pref.dart';
+import 'package:snap_check/utils/permission_uril.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,6 +16,92 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final BasicService _basicService = BasicService();
+  ActiveDayLogDataModel? _activeDayLogDataModel = null;
+  final permissionHandler = PermissionUtil();
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    _isLoading = true;
+    // Initialize background service
+    // Check and request notification permission
+    if (await permissionHandler.isNotificationPermissionRequired) {
+      final hasPermission =
+          await permissionHandler.requestNotificationPermission();
+      if (!hasPermission) {
+        // Handle permission denial
+        debugPrint('Notification permission denied');
+        // Optionally show user guidance
+      }
+    }
+    await initializeService();
+    await _fetchActiveDayLog();
+  }
+
+  Future<void> _fetchActiveDayLog() async {
+    try {
+      final tokenData = await SharedPrefHelper.getToken();
+      setState(() => _isLoading = true);
+
+      final response = await _basicService.getActiveDayLog(tokenData!);
+      if (response != null && response.data != null) {
+        SharedPrefHelper.saveActiveDayLogId(response.data!.id.toString());
+        setState(() {
+          _activeDayLogDataModel = response.data;
+        });
+      } else {
+        SharedPrefHelper.clearActiveDayLog();
+        stopLocationService();
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (e is UnauthorizedException) {
+        setState(() {
+          _isLoading = false;
+        });
+        SharedPrefHelper.clearUser();
+        _redirectToLogin();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _redirectToLogin() {
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  }
+
+  void _redirectToCheckout() {
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(
+          '/checkoutDayLog',
+          (route) => false,
+          arguments: _activeDayLogDataModel,
+        )
+        .then((flag) {
+          if (flag == true) {
+            _fetchActiveDayLog();
+          }
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 4 : 3;
@@ -43,16 +135,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   textAlign: TextAlign.center,
                 ),
                 // Full-width Check-In Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.check_circle_rounded),
-                    label: Text("Check In / Add Day Log"),
-                    onPressed: () {
-                      _navigationRoutes(context, "/addDayLog");
-                    },
-                  ),
-                ),
+                _isLoading
+                    ? CircularProgressIndicator()
+                    : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.check_circle_rounded),
+                        label: Text(
+                          _activeDayLogDataModel == null
+                              ? "Check In / Start Day Log"
+                              : "Stop Tracking",
+                        ),
+                        onPressed: () {
+                          if (_activeDayLogDataModel == null) {
+                            _navigationRoutes(context, "/addDayLog");
+                          } else {
+                            _redirectToCheckout();
+                          }
+                        },
+                      ),
+                    ),
 
                 const SizedBox(height: 32),
                 // Using shrinkWrap and setting the GridView to take only available space
@@ -90,13 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  // Function to show SnackBar
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   // Function to show SnackBar

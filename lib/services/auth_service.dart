@@ -11,6 +11,7 @@ import 'package:snap_check/services/share_pref.dart';
 
 class AuthService extends Service {
   Future<LoginResponseModel?> signInWithEmailPassword(
+    String domain,
     String email,
     String password,
   ) async {
@@ -20,7 +21,11 @@ class AuthService extends Service {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({
+        'domain': domain,
+        'email': email,
+        'password': password,
+      }),
     );
     debugPrint(response.body);
     return LoginResponseModel.fromJson(jsonDecode(response.body));
