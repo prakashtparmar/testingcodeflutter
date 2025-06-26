@@ -41,7 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
         // Optionally show user guidance
       }
     }
-    await initializeService();
     await _fetchActiveDayLog();
   }
 
@@ -56,9 +55,21 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _activeDayLogDataModel = response.data;
         });
+        final locationService = LocationTrackingService();
+
+        // Start tracking
+        bool started = await locationService.startTracking(
+          token: tokenData,
+          dayLogId: response.data!.id.toString(),
+        );
+        debugPrint("started $started");
       } else {
         SharedPrefHelper.clearActiveDayLog();
-        stopLocationService();
+        final locationService = LocationTrackingService();
+        // Stop tracking
+        await locationService.stopTracking();
+        // Dispose when done
+        await locationService.dispose();
         setState(() {
           _isLoading = false;
         });
@@ -71,9 +82,11 @@ class _HomeScreenState extends State<HomeScreen> {
         SharedPrefHelper.clearUser();
         _redirectToLogin();
       } else {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } finally {
       if (mounted) {

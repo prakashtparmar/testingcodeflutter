@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/services/location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -434,13 +435,13 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
     }
     // Base form data
     final Map<String, String> formData = {
-      "tour_purpose": selectedPurpose!.id.toString(),
-      "vehicle_type": selectedVehicle!.id.toString(),
-      "tour_type": selectedTourType!.id.toString(),
+      "tour_purpose": "${selectedPurpose!.id}",
+      "vehicle_type": "${selectedVehicle!.id}",
+      "tour_type": "${selectedTourType!.id}",
       "place_visit": placeVisited!,
       "opening_km": openingKm!,
-      "opening_km_latitude": currentPosition!.latitude.toString(),
-      "opening_km_longitude": currentPosition!.longitude.toString(),
+      "opening_km_latitude": "${currentPosition!.latitude}",
+      "opening_km_longitude": "${currentPosition!.longitude}",
     };
     // If the selected purpose's name is in the list, include party_id
     if (selectedPurpose != null &&
@@ -449,7 +450,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           selectedParty!.id.toString(); // assumes `selectedParty` is defined
     }
 
-    PostDayLogsResponseModel? postDayLogsResponseModel = await _basicService
+    CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
         .postDayLog(tokenData!, imageFile, formData);
     if (postDayLogsResponseModel != null &&
         postDayLogsResponseModel.success == true) {
@@ -457,15 +458,6 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
         return;
       }
 
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder:
-      //         (_) => LiveMapScreen(logId: postDayLogsResponseModel.data!.id!),
-      //   ),
-      // );
-      // Start service
-      // Request location permissions
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         // Handle location services disabled
@@ -485,8 +477,15 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
         // Handle permissions permanently denied
         return;
       }
-      final service = FlutterBackgroundService();
-      var started = await service.startService();
+      // Initialize
+      final locationService = LocationTrackingService();
+
+      // Start tracking
+      bool started = await locationService.startTracking(
+        token: tokenData,
+        dayLogId: postDayLogsResponseModel.data!.id.toString(),
+      );
+
       if (started) {
         if (mounted) Navigator.of(context).pop(true); // Close LiveMapScreen
       }

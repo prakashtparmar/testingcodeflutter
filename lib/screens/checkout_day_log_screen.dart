@@ -159,7 +159,11 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
 
       if (response?.success == true) {
         SharedPrefHelper.clearActiveDayLog();
-        stopLocationService();
+        final locationService = LocationTrackingService();
+        // Stop tracking
+        await locationService.stopTracking();
+        // Dispose when done
+        await locationService.dispose();
       
         scaffold.showSnackBar(
           const SnackBar(
@@ -167,9 +171,12 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
             duration: Duration(seconds: 3),
           ),
         );
-        Navigator.of(context).pop(true); // Return success
+        Navigator.of(context).pop(); // Return success
       } else {
-        throw Exception(response?.message ?? 'Submission failed');
+       SnackBar(
+          content: Text('Error: ${response?.message}'),
+          duration: const Duration(seconds: 5),
+        );
       }
     } catch (e) {
       debugPrint(e.toString());

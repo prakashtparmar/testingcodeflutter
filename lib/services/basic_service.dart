@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/active_day_log_response_model.dart';
+import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/day_log_data_model.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
@@ -72,7 +73,7 @@ class BasicService extends Service {
     return PartyUsersResponseModel.fromJson(_handleResponse(response));
   }
 
-  Future<PostDayLogsResponseModel?> postDayLog(
+  Future<CreateDayLogResponseModel?> postDayLog(
     String token,
     XFile? imageFile,
     Map<String, String> fields,
@@ -86,7 +87,11 @@ class BasicService extends Service {
       "Content-type": "application/json",
     });
     // Add text fields (like date, place, km, etc.)
-    request.fields.addAll(fields);
+
+    // Add fields one by one
+    fields.forEach((key, value) {
+      request.fields[key] = value;
+    });
     // Add image file (optional)
     if (imageFile != null) {
       request.files.add(
@@ -101,8 +106,7 @@ class BasicService extends Service {
     final response = await request.send();
 
     final responseString = await response.stream.bytesToString();
-    debugPrint(responseString.toString());
-    return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
+    return CreateDayLogResponseModel.fromJson(jsonDecode(responseString));
   }
 
   Future<DayLogDetailResponseModel?> getDayLogDetail(
@@ -162,7 +166,6 @@ class BasicService extends Service {
     // Send the request
     final response = await request.send();
     final responseString = await response.stream.bytesToString();
-    debugPrint(responseString);
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
   }
 
