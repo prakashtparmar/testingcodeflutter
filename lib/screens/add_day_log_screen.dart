@@ -1,8 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
-import 'package:snap_check/models/post_day_log_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
@@ -200,166 +201,209 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Start Day Log')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child:
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDropdownField(
-                          'Tour Purpose',
-                          tourPurposes,
-                          selectedPurpose,
-                          (val) {
-                            setState(() {
-                              selectedPurpose = val;
-                              selectedParty = null;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDropdownField(
-                          'Vehicle Type',
-                          vehicleTypes,
-                          selectedVehicle,
-                          (val) {
-                            setState(() => selectedVehicle = val);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDropdownField(
-                          'Tour Type',
-                          tourTypes,
-                          selectedTourType,
-                          (val) {
-                            setState(() => selectedTourType = val);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        if (selectedPurpose != null &&
-                            purposesWithParties.contains(selectedPurpose!.name))
-                          _buildStringDropdownField(
-                            'Select Party',
-                            parties,
-                            selectedParty,
-                            (val) {
-                              setState(() => selectedParty = val);
-                            },
-                          ),
-                        if (selectedPurpose != null &&
-                            purposesWithParties.contains(selectedPurpose!.name))
-                          const SizedBox(height: 12),
-
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Place Visited',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (val) => placeVisited = val,
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Enter place visited'
-                                      : null,
-                        ),
-                        const SizedBox(height: 12),
-
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Opening K.M.',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) => openingKm = val,
-                                validator:
-                                    (val) =>
-                                        val == null || val.isEmpty
-                                            ? 'Enter opening KM'
-                                            : null,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Align(
-                              alignment: Alignment.topCenter,
-                              child: InkWell(
-                                onTap: _pickImage,
-                                child: Container(
-                                  height: 50,
-                                  width: 50,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Show Google Map preview with marker if currentPosition is not null
-                        if (currentPosition != null)
-                          SizedBox(
-                            height: 200,
-                            child: GoogleMap(
-                              initialCameraPosition: CameraPosition(
-                                target: LatLng(
-                                  currentPosition!.latitude,
-                                  currentPosition!.longitude,
-                                ),
-                                zoom: 15,
-                              ),
-                              markers: {
-                                Marker(
-                                  markerId: const MarkerId('currentLocation'),
-                                  position: LatLng(
-                                    currentPosition!.latitude,
-                                    currentPosition!.longitude,
-                                  ),
-                                ),
-                              },
-                              onMapCreated: (controller) {
-                                mapController = controller;
-                              },
-                              myLocationEnabled: true,
-                              myLocationButtonEnabled: true,
-                              zoomControlsEnabled: false,
-                            ),
-                          ),
-                        const SizedBox(height: 12),
-
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _submitForm,
-                            child: const Text('Submit & Start'),
-                          ),
-                        ),
-                      ],
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(title: const Text('Check-in Day Log')),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildDropdownField(
+                      'Tour Purpose',
+                      tourPurposes,
+                      selectedPurpose,
+                      (val) {
+                        setState(() {
+                          selectedPurpose = val;
+                          selectedParty = null;
+                        });
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 12),
+
+                    _buildDropdownField(
+                      'Vehicle Type',
+                      vehicleTypes,
+                      selectedVehicle,
+                      (val) {
+                        setState(() => selectedVehicle = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    _buildDropdownField(
+                      'Tour Type',
+                      tourTypes,
+                      selectedTourType,
+                      (val) {
+                        setState(() => selectedTourType = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (selectedPurpose != null &&
+                        purposesWithParties.contains(selectedPurpose!.name))
+                      _buildStringDropdownField(
+                        'Select Party',
+                        parties,
+                        selectedParty,
+                        (val) {
+                          setState(() => selectedParty = val);
+                        },
+                      ),
+                    if (selectedPurpose != null &&
+                        purposesWithParties.contains(selectedPurpose!.name))
+                      const SizedBox(height: 12),
+
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Place Visited',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) => placeVisited = val,
+                      validator:
+                          (val) =>
+                              val == null || val.isEmpty
+                                  ? 'Enter place visited'
+                                  : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Opening K.M.',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (val) => openingKm = val,
+                      validator:
+                          (val) =>
+                              val == null || val.isEmpty
+                                  ? 'Enter opening KM'
+                                  : null,
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                imageFile == null
+                                    ? Colors.grey.shade300
+                                    : Colors.green,
+                            width: 1.5,
+                          ),
+                        ),
+                        child:
+                            imageFile == null
+                                ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(
+                                      Icons.camera_alt,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Tap to take vehicle photo',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ],
+                                )
+                                : Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.file(
+                                          File(imageFile!.path),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Show Google Map preview with marker if currentPosition is not null
+                    if (currentPosition != null)
+                      SizedBox(
+                        height: 200,
+                        child: GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: LatLng(
+                              currentPosition!.latitude,
+                              currentPosition!.longitude,
+                            ),
+                            zoom: 15,
+                          ),
+                          markers: {
+                            Marker(
+                              markerId: const MarkerId('currentLocation'),
+                              position: LatLng(
+                                currentPosition!.latitude,
+                                currentPosition!.longitude,
+                              ),
+                            ),
+                          },
+                          onMapCreated: (controller) {
+                            mapController = controller;
+                          },
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          zoomControlsEnabled: false,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _submitForm,
+                        child: const Text('Submit & Start'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
+        if (_isLoading)
+          Container(
+            color: Colors.black.withAlpha((0.4 * 255).round()),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 

@@ -28,6 +28,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUser();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      _fetchActiveDayLog();
+    }
+  }
+
   Future<void> _loadUser() async {
     _isLoading = true;
     // Initialize background service
@@ -81,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
         });
         SharedPrefHelper.clearUser();
         _redirectToLogin();
+      } else if (e is NotFoundException) {
+        SharedPrefHelper.clearActiveDayLog();
+        final locationService = LocationTrackingService();
+        // Stop tracking
+        await locationService.stopTracking();
+        // Dispose when done
+        await locationService.dispose();
+        setState(() {
+          _isLoading = false;
+        });
       } else {
         if (mounted) {
           setState(() {
@@ -103,11 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _redirectToCheckout() {
     Navigator.of(context)
-        .pushNamedAndRemoveUntil(
-          '/checkoutDayLog',
-          (route) => false,
-          arguments: _activeDayLogDataModel,
-        )
+        .pushNamed('/checkoutDayLog', arguments: _activeDayLogDataModel)
         .then((flag) {
           if (flag == true) {
             _fetchActiveDayLog();
@@ -119,38 +133,42 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 4 : 3;
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          // Wrap the Column in SingleChildScrollView
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  "Select an option below to proceed",
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              // Wrap the Column in SingleChildScrollView
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
                 ),
-                // Full-width Check-In Button
-                _isLoading
-                    ? CircularProgressIndicator()
-                    : SizedBox(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Select an option below to proceed",
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Full-width Check-In Button
+                    SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         icon: Icon(Icons.check_circle_rounded),
@@ -169,41 +187,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                const SizedBox(height: 32),
-                // Using shrinkWrap and setting the GridView to take only available space
-                GridView.count(
-                  shrinkWrap:
-                      true, // Ensures the GridView only takes as much space as it needs
-                  physics:
-                      NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1, // Equal size for each grid item
-                  children: [
-                    _buildGridItem(
-                      context,
-                      icon: AppAssets.dayLogs,
-                      title: "Day Logs",
-                      onTap: () {
-                        _navigationRoutes(context, "/dayLogs");
-                      },
-                    ),
-                    _buildGridItem(
-                      context,
-                      icon: AppAssets.leaves,
-                      title: "Leaves",
-                      onTap: () {
-                        _navigationRoutes(context, "/leaves");
-                      },
+                    const SizedBox(height: 12),
+                    // Using shrinkWrap and setting the GridView to take only available space
+                    GridView.count(
+                      shrinkWrap:
+                          true, // Ensures the GridView only takes as much space as it needs
+                      physics:
+                          NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1, // Equal size for each grid item
+                      children: [
+                        _buildGridItem(
+                          context,
+                          icon: AppAssets.dayLogs,
+                          title: "Day Logs",
+                          onTap: () {
+                            _navigationRoutes(context, "/dayLogs");
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon: AppAssets.leaves,
+                          title: "Leaves",
+                          onTap: () {
+                            _navigationRoutes(context, "/leaves");
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
+        if (_isLoading)
+          Container(
+            color: Colors.black.withAlpha((0.4 * 255).round()),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 

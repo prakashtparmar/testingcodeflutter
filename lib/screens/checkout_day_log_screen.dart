@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/location_service.dart';
@@ -104,9 +106,20 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         );
         return;
       }
+      // final tokenData = await SharedPrefHelper.getToken();
+      // final logDetail = await BasicService().getDayLogDetail(
+      //   tokenData!,
+      //   _activeDayLogDataModel!.id!,
+      // );
+
+      // if (logDetail != null) {
+      //   setState(() {
+      //     dayLogDetailModel = logDetail.data;
+      //   });
+      // }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       if (mounted) {
@@ -137,11 +150,9 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    final scaffold = ScaffoldMessenger.of(context);
 
     try {
       final tokenData = await SharedPrefHelper.getToken();
-      if (tokenData == null) throw Exception('Authentication required');
 
       final formData = {
         "day_log_id": "${_activeDayLogDataModel?.id ?? "0"}",
@@ -152,7 +163,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
       };
 
       final response = await BasicService().postCloseDay(
-        tokenData,
+        tokenData!,
         _imageFile,
         formData,
       );
@@ -164,192 +175,268 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         await locationService.stopTracking();
         // Dispose when done
         await locationService.dispose();
-      
-        scaffold.showSnackBar(
-          const SnackBar(
-            content: Text('Checkout submitted successfully!'),
-            duration: Duration(seconds: 3),
-          ),
+        SnackBar(
+          content: Text("Checkout submitted successfully!"),
+          duration: const Duration(seconds: 5),
         );
+
         Navigator.of(context).pop(); // Return success
       } else {
-       SnackBar(
+        SnackBar(
           content: Text('Error: ${response?.message}'),
           duration: const Duration(seconds: 5),
         );
       }
     } catch (e) {
-      debugPrint(e.toString());
-      scaffold.showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          duration: const Duration(seconds: 5),
-        ),
+      debugPrint("submit failed ${e.toString()}");
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+      SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        duration: const Duration(seconds: 5),
       );
     } finally {
+      debugPrint("submit finally");
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
-      body: SingleChildScrollView(
+  Widget _buildDayLogHeader() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Closing K.M.',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.speed),
-                  suffixText: 'km',
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (km) => closingKm = km,
-                validator: (val) => val?.isEmpty ?? true ? 'Required' : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Basic info
+            if (_activeDayLogDataModel?.openingKm != null)
+              _buildDetailRow('Opening KM', _activeDayLogDataModel!.openingKm!),
+
+            // Tour details
+            if (_activeDayLogDataModel?.tourPurpose != null)
+              _buildDetailRow(
+                'Purpose',
+                _activeDayLogDataModel!.tourPurpose!.name ?? "N/A",
               ),
-              const SizedBox(height: 20),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                  prefixIcon: Icon(Icons.notes),
-                ),
-                maxLines: 3,
-                onChanged: (text) => notes = text,
+
+            if (_activeDayLogDataModel?.vehicleType != null)
+              _buildDetailRow(
+                'Vehicle',
+                _activeDayLogDataModel!.vehicleType!.name ?? "N/A",
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Vehicle Photo',
-                style: Theme.of(context).textTheme.titleMedium,
+
+            if (_activeDayLogDataModel?.tourType != null)
+              _buildDetailRow(
+                'Tour Type',
+                _activeDayLogDataModel!.tourType!.name ?? "N/A",
               ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _captureImage,
-                child: Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color:
-                          _imageFile == null
-                              ? Colors.grey.shade300
-                              : Colors.green,
-                      width: 1.5,
-                    ),
-                  ),
-                  child:
-                      _imageFile == null
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.camera_alt,
-                                size: 48,
-                                color: Colors.grey,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Tap to take vehicle photo',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          )
-                          : Stack(
-                            children: [
-                              Positioned.fill(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.file(
-                                    File(_imageFile!.path),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                ),
+
+            if (_activeDayLogDataModel?.partyId != null)
+              _buildDetailRow(
+                'Party ID',
+                _activeDayLogDataModel!.partyId.toString(),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '* Photo is required for checkout',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+
+            if (_activeDayLogDataModel?.placeVisit != null)
+              _buildDetailRow(
+                'Place to Visit',
+                _activeDayLogDataModel!.placeVisit!,
               ),
-              const SizedBox(height: 24),
-              if (currentPosition != null) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Location captured: ${currentPosition!.latitude.toStringAsFixed(4)}, '
-                        '${currentPosition!.longitude.toStringAsFixed(4)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed:
-                    _isSubmitting ? null : () => _submitCheckout(context),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child:
-                    _isSubmitting
-                        ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                        : const Text(
-                          'SUBMIT CHECKOUT',
-                          style: TextStyle(fontSize: 16),
-                        ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(title: const Text('Checkout')),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildDayLogHeader(),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Closing K.M.',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (val) => closingKm = val,
+                    validator:
+                        (val) =>
+                            val == null || val.isEmpty
+                                ? 'Enter Closing KM'
+                                : null,
+                  ),
+
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.text,
+                    onChanged: (val) => notes = val,
+                    validator:
+                        (val) =>
+                            val == null || val.isEmpty
+                                ? 'Enter Closing KM'
+                                : null,
+                  ),
+
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _captureImage,
+                    child: Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              _imageFile == null
+                                  ? Colors.grey.shade300
+                                  : Colors.green,
+                          width: 1.5,
+                        ),
+                      ),
+                      child:
+                          _imageFile == null
+                              ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(
+                                    Icons.camera_alt,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Tap to take vehicle photo',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              )
+                              : Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.file(
+                                        File(_imageFile!.path),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  if (currentPosition != null)
+                    SizedBox(
+                      height: 200,
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(
+                            currentPosition!.latitude,
+                            currentPosition!.longitude,
+                          ),
+                          zoom: 15,
+                        ),
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('currentLocation'),
+                            position: LatLng(
+                              currentPosition!.latitude,
+                              currentPosition!.longitude,
+                            ),
+                          ),
+                        },
+                        onMapCreated: (controller) {},
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: true,
+                        zoomControlsEnabled: false,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed:
+                        _isSubmitting ? null : () => _submitCheckout(context),
+                    child: const Text('SUBMIT CHECKOUT'),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_isSubmitting)
+          Container(
+            color: Colors.black.withAlpha((0.4 * 255).round()),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 }

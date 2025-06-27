@@ -124,11 +124,6 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
     );
   }
 
-  // Navigation Methods
-  void _navigateToAddLog() {
-    Navigator.pushNamed(context, '/addDayLog').then((_) => _fetchDayLogs());
-  }
-
   Future<void> _navigateToTracking(DayLogsDataModel log) async {
     // Show loading indicator during navigation transition
     showDialog(
@@ -165,28 +160,32 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Day Logs')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddLog,
-        tooltip: 'Add new log',
-        child: Icon(Icons.add),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Search Field
-              _buildSearchField(),
-              const SizedBox(height: 16),
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(title: const Text('Day Logs')),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Search Field
+                  _buildSearchField(),
+                  const SizedBox(height: 16),
 
-              // Main Content
-              Expanded(child: _buildBodyContent()),
-            ],
+                  // Main Content
+                  Expanded(child: _buildBodyContent()),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        if (_isLoading)
+          Container(
+            color: Colors.black.withAlpha((0.4 * 255).round()),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 
