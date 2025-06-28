@@ -12,6 +12,7 @@ import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
 import 'package:snap_check/screens/splash_screen.dart';
+import 'package:snap_check/screens/start_trip_screen.dart';
 import 'package:snap_check/screens/user_detail_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
 
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
         '/editProfile': (context) => EditProfileScreen(),
         '/changePassword': (context) => ChangePasswordScreen(),
         '/checkoutDayLog': (context) => CheckoutDayLogScreen(),
+        '/starTrip': (context) => StartTripScreen(),
       },
     );
   }

@@ -127,8 +127,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              "${_user?.firstName ?? ''} ${_user?.lastName ?? ''}"
-                                  .trim(),
+                              _user!.getName().trim(),
                               style: textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),

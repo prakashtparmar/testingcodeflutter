@@ -26,7 +26,7 @@ class Service {
     apiResetPassword = "$baseUrl/reset-password"; // Proper URL concatenation
     apiLogout = "$baseUrl/logout"; // Proper URL concatenation
     apiTourDetails = "$baseUrl/tourDetails"; // Proper URL concatenation
-    apiDayLogs = "$baseUrl/dayLogs"; // Proper URL concatenation
+    apiDayLogs = "$baseUrl/trips"; // Proper URL concatenation
     apiUserDetail = "$baseUrl/userDetail"; // Proper URL concatenation
     apiPartyUsers = "$baseUrl/partyUsers"; // Proper URL concatenation
     apiDayLogStoreLocations =
@@ -38,6 +38,6 @@ class Service {
     apiLeavesTypes = "$baseUrl/leavesTypes"; // Proper URL concatenation
     apiChangePassword = "$baseUrl/changePassword"; // Proper URL concatenation
     apiLeaveRequest = "$baseUrl/leaves"; // Proper URL concatenation
-    apiActiveDayLog = "$baseUrl/dayLog/active"; // Proper URL concatenation
+    apiActiveDayLog = "$baseUrl/trip/active"; // Proper URL concatenation
   }
 }

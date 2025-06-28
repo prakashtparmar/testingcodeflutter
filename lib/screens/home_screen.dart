@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onPressed: () {
                           if (_activeDayLogDataModel == null) {
-                            _navigationRoutes(context, "/addDayLog");
+                            _navigationRoutes(context, "/starTrip");
                           } else {
                             _redirectToCheckout();
                           }

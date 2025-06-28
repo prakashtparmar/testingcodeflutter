@@ -70,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _user = userData;
       _token = tokenData ?? "";
       _email = userData?.email ?? "";
-      _name = "${userData?.firstName ?? ''} ${userData?.lastName ?? ''}".trim();
+      _name = userData?.getName().trim();
     });
   }
 
@@ -194,12 +194,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
       ],
     );
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _confirmLogout(BuildContext context) async {

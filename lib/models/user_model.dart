@@ -7,6 +7,7 @@ import 'package:snap_check/models/taluka_model.dart';
 
 class User {
   int? id;
+  String? name;
   String? firstName;
   String? lastName;
   String? mobile;
@@ -44,6 +45,7 @@ class User {
 
   User({
     this.id,
+    this.name,
     this.firstName,
     this.lastName,
     this.mobile,
@@ -82,6 +84,7 @@ class User {
 
   User.fromJson(Map<String, dynamic> json) {
     id = json['id'];
+    name = json['name'];
     firstName = json['first_name'];
     lastName = json['last_name'];
     mobile = json['mobile'];
@@ -118,8 +121,7 @@ class User {
         json['designation'] != null
             ? DesignationModel.fromJson(json['designation'])
             : null;
-    manager =
-        json['manager'] != null ? User.fromJson(json['manager']) : null;
+    manager = json['manager'] != null ? User.fromJson(json['manager']) : null;
     taluka =
         json['taluka'] != null ? TalukaModel.fromJson(json['taluka']) : null;
   }
@@ -127,6 +129,7 @@ class User {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
+    data['name'] = name;
     data['first_name'] = firstName;
     data['last_name'] = lastName;
     data['mobile'] = mobile;
@@ -176,5 +179,15 @@ class User {
       data['taluka'] = taluka!.toJson();
     }
     return data;
+  }
+
+  String getName() {
+    if (name != null) {
+      return name!;
+    } else if (firstName != null && lastName != null) {
+      return "${firstName!} ${lastName!}";
+    } else {
+      return "";
+    }
   }
 }
