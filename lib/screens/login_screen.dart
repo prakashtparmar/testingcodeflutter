@@ -93,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _domainController,
                       decoration: const InputDecoration(
-                        labelText: 'Domain',
+                        labelText: 'Company Code',
                         prefixIcon: Icon(Icons.domain),
                       ),
                     ),
