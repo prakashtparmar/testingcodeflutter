@@ -1,8 +1,9 @@
-import 'package:snap_check/models/country_model.dart';
+
+import 'package:snap_check/models/state_model.dart';
 
 class LocationsResponseModel {
   bool? success;
-  List<CountryModel>? data;
+  List<StateModel>? data;
   String? message;
 
   LocationsResponseModel({this.success, this.data, this.message});
@@ -10,9 +11,9 @@ class LocationsResponseModel {
   LocationsResponseModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
     if (json['data'] != null) {
-      data = <CountryModel>[];
+      data = <StateModel>[];
       json['data'].forEach((v) {
-        data!.add( CountryModel.fromJson(v));
+        data!.add( StateModel.fromJson(v));
       });
     }
     message = json['message'];

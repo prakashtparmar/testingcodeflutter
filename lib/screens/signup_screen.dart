@@ -52,10 +52,10 @@ class _SignupScreenState extends State<SignupScreen> {
       final response = await _basicService.getLocations();
       if (response != null && response.data != null) {
         setState(() {
-          _countries = response.data!;
-          _states = response.data!.first.states!;
-          _cities = response.data!.first.states!.first.cities!;
-          _talukas = response.data!.first.states!.first.cities!.first.talukas!;
+          // _countries = response.data!;
+          // _states = response.data!.first.states!;
+          // _cities = response.data!.first.states!.first.cities!;
+          // _talukas = response.data!.first.states!.first.cities!.first.talukas!;
         });
       }
     } catch (e) {

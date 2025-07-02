@@ -37,12 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     //   title: 'Language',
     //   onTapMessage: 'Language tapped',
     // ),
-    _SettingItem(
-      icon: Icons.security,
-      title: 'Change Password',
-      onTapMessage: 'Change Password tapped',
-      route: "/changePassword",
-    ),
+    // _SettingItem(
+    //   icon: Icons.security,
+    //   title: 'Change Password',
+    //   onTapMessage: 'Change Password tapped',
+    //   route: "/changePassword",
+    // ),
     _SettingItem(
       icon: Icons.logout,
       title: 'Logout',
@@ -70,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _user = userData;
       _token = tokenData ?? "";
       _email = userData?.email ?? "";
-      _name = userData?.getName().trim();
+      _name = userData?.name!.trim();
     });
   }
 
@@ -120,19 +120,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       );
                                     },
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    tooltip: 'Edit Profile',
-                                    onPressed: () async {
-                                      final result = await Navigator.pushNamed(
-                                        context,
-                                        '/editProfile',
-                                      );
-                                      if (result == true) {
-                                        _loadUser(); // Refresh if edited
-                                      }
-                                    },
-                                  ),
+                                  // IconButton(
+                                  //   icon: const Icon(Icons.edit),
+                                  //   tooltip: 'Edit Profile',
+                                  //   onPressed: () async {
+                                  //     final result = await Navigator.pushNamed(
+                                  //       context,
+                                  //       '/editProfile',
+                                  //     );
+                                  //     if (result == true) {
+                                  //       _loadUser(); // Refresh if edited
+                                  //     }
+                                  //   },
+                                  // ),
                                 ],
                               ),
                               Text(

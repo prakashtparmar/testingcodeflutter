@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:snap_check/models/city_model.dart';
 import 'package:snap_check/models/country_model.dart';
+import 'package:snap_check/models/district_model.dart';
 import 'package:snap_check/models/state_model.dart';
 import 'package:snap_check/models/taluka_model.dart';
 import 'package:snap_check/services/api_exception.dart';
@@ -30,14 +30,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   CountryModel? _selectedCountry;
   StateModel? _selectedState;
-  CityModel? _selectedCity;
+  DistrictModel? _selectedCity;
   TalukaModel? _selectedTaluko;
   bool _isLoading = false;
 
   // Sample data - replace with API fetched list in real app
-  List<CountryModel> _countries = [];
+  // List<CountryModel> _countries = [];
   List<StateModel> _states = [];
-  List<CityModel> _cities = [];
+  List<DistrictModel> _cities = [];
   List<TalukaModel> _talukas = [];
 
   final AuthService _authService = AuthService();
@@ -75,46 +75,46 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           if (user != null) {
             setState(() {
               _emailController.text = user.email!;
-              _firstNameController.text = user.firstName!;
-              _lastNameController.text = user.lastName!;
-              _address1Controller.text = user.addressLine1!;
-              _address2Controller.text = user.addressLine2!;
+              _firstNameController.text = user.name!;
+              _lastNameController.text = user.name!;
+              // _address1Controller.text = user.addressLine1!;
+              // _address2Controller.text = user.addressLine2!;
               // _selectedCountry = user.country;
               // _selectedState = user.state;
               // _selectedCity = user.city;
               // _selectedTaluko = user.taluka;
               // 1. Set selected country
-              _selectedCountry = _countries.firstWhere(
-                (c) => c.id == user.country?.id,
-                orElse: () => _countries.first,
-              );
+              // _selectedCountry = _countries.firstWhere(
+              //   (c) => c.id == user.country?.id,
+              //   orElse: () => _countries.first,
+              // );
 
               // 2. Populate states from selected country
               _states = _selectedCountry?.states ?? [];
 
               // 3. Set selected state
-              _selectedState = _states.firstWhere(
-                (s) => s.id == user.state?.id,
-                orElse: () => _states.first,
-              );
+              // _selectedState = _states.firstWhere(
+              //   (s) => s.id == user.state?.id,
+              //   orElse: () => _states.first,
+              // );
 
               // 4. Populate cities from selected state
-              _cities = _selectedState?.cities ?? [];
+              _cities = _selectedState?.districts ?? [];
 
               // 5. Set selected city
-              _selectedCity = _cities.firstWhere(
-                (c) => c.id == user.city?.id,
-                orElse: () => _cities.first,
-              );
+              // _selectedCity = _cities.firstWhere(
+              //   (c) => c.id == user.city?.id,
+              //   orElse: () => _cities.first,
+              // );
 
               // 6. Populate talukas from selected city
-              _talukas = _selectedCity?.talukas ?? [];
+              _talukas = _selectedCity?.tehsils ?? [];
 
               // 7. Set selected taluka
-              _selectedTaluko = _talukas.firstWhere(
-                (t) => t.id == user.taluka?.id,
-                orElse: () => _talukas.first,
-              );
+              // _selectedTaluko = _talukas.firstWhere(
+              //   (t) => t.id == user.taluka?.id,
+              //   orElse: () => _talukas.first,
+              // );
               _selectedGender = genderFromString(user.gender);
             });
           }
@@ -168,10 +168,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final response = await _basicService.getLocations();
       if (response != null && response.data != null) {
         setState(() {
-          _countries = response.data!;
-          _states = response.data!.first.states!;
-          _cities = response.data!.first.states!.first.cities!;
-          _talukas = response.data!.first.states!.first.cities!.first.talukas!;
+          // _countries = response.data!;
+          _states = response.data!;
+          _cities = response.data!.first.districts!;
+          _talukas = response.data!.first.districts!.first.tehsils!;
         });
       }
     } catch (e) {
@@ -344,38 +344,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   : null,
                     ),
                     const SizedBox(height: 20),
-                    DropdownButtonFormField<CountryModel>(
-                      isExpanded: true, // ✅ Important fix
-                      value: _selectedCountry,
-                      items:
-                          _countries.map((country) {
-                            return DropdownMenuItem(
-                              value: country,
-                              child: Text(
-                                country.name ?? '',
-                                overflow:
-                                    TextOverflow
-                                        .ellipsis, // Truncate long names
-                              ),
-                            );
-                          }).toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'Country',
-                        prefixIcon: Icon(Icons.flag_outlined),
-                      ),
-                      onChanged:
-                          (value) => setState(() {
-                            _selectedCountry = value;
-                            _states = value!.states!;
-                            _selectedState = null;
-                            _selectedCity = null;
-                          }),
-                      validator:
-                          (value) =>
-                              value == null ? 'Please select a country' : null,
-                    ),
-                    const SizedBox(height: 20),
 
+                    // DropdownButtonFormField<CountryModel>(
+                    //   isExpanded: true, // ✅ Important fix
+                    //   value: _selectedCountry,
+                    //   items:
+                    //       _countries.map((country) {
+                    //         return DropdownMenuItem(
+                    //           value: country,
+                    //           child: Text(
+                    //             country.name ?? '',
+                    //             overflow:
+                    //                 TextOverflow
+                    //                     .ellipsis, // Truncate long names
+                    //           ),
+                    //         );
+                    //       }).toList(),
+                    //   decoration: const InputDecoration(
+                    //     labelText: 'Country',
+                    //     prefixIcon: Icon(Icons.flag_outlined),
+                    //   ),
+                    //   onChanged:
+                    //       (value) => setState(() {
+                    //         _selectedCountry = value;
+                    //         _states = value!.states!;
+                    //         _selectedState = null;
+                    //         _selectedCity = null;
+                    //       }),
+                    //   validator:
+                    //       (value) =>
+                    //           value == null ? 'Please select a country' : null,
+                    // ),
+                    // const SizedBox(height: 20),
                     DropdownButtonFormField<StateModel>(
                       isExpanded: true, // ✅ Important fix
 
@@ -397,7 +397,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       onChanged:
                           (value) => setState(() {
                             _selectedState = value;
-                            _cities = value!.cities!;
+                            _cities = value!.districts!;
                             _selectedCity = null;
                           }),
                       validator:
@@ -406,7 +406,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    DropdownButtonFormField<CityModel>(
+                    DropdownButtonFormField<DistrictModel>(
                       isExpanded: true, // ✅ Important fix
 
                       value: _selectedCity,
@@ -427,7 +427,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       onChanged:
                           (value) => setState(() {
                             _selectedCity = value;
-                            _talukas = value!.talukas!;
+                            _talukas = value?.tehsils ?? [];
                             _selectedTaluko = null;
                           }),
                       validator:

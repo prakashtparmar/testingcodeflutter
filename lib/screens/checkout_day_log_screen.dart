@@ -138,6 +138,12 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
     }
   }
 
+  String to24HourFormat(TimeOfDay time) {
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat('HH:mm:ss').format(dt);
+  }
+
   Future<void> _submitCheckout(BuildContext context) async {
     if (!_validateCheckoutForm()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,11 +161,12 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
       final tokenData = await SharedPrefHelper.getToken();
 
       final formData = {
-        "day_log_id": "${_activeDayLogDataModel?.id ?? "0"}",
-        "closing_km": closingKm!,
-        "note": notes ?? '',
-        "closing_km_latitude": currentPosition!.latitude.toString(),
-        "closing_km_longitude": currentPosition!.longitude.toString(),
+        "id": "${_activeDayLogDataModel?.id ?? "0"}",
+        "end_time": to24HourFormat(TimeOfDay.now()),
+        "end_km": closingKm!,
+        "closenote": notes ?? '',
+        "end_lat": currentPosition!.latitude.toString(),
+        "end_lng": currentPosition!.longitude.toString(),
       };
 
       final response = await BasicService().postCloseDay(
@@ -215,38 +222,40 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Basic info
-            if (_activeDayLogDataModel?.openingKm != null)
-              _buildDetailRow('Opening KM', _activeDayLogDataModel!.openingKm!),
-
-            // Tour details
-            if (_activeDayLogDataModel?.tourPurpose != null)
+            if (_activeDayLogDataModel?.startingKm != null)
               _buildDetailRow(
-                'Purpose',
-                _activeDayLogDataModel!.tourPurpose!.name ?? "N/A",
+                'Opening KM',
+                _activeDayLogDataModel!.startingKm!,
               ),
 
-            if (_activeDayLogDataModel?.vehicleType != null)
+            // Tour details
+            if (_activeDayLogDataModel?.purpose != null)
+              _buildDetailRow(
+                'Purpose',
+                _activeDayLogDataModel!.purpose.toString() ?? "N/A",
+              ),
+
+            if (_activeDayLogDataModel?.travelMode != null)
               _buildDetailRow(
                 'Vehicle',
-                _activeDayLogDataModel!.vehicleType!.name ?? "N/A",
+                _activeDayLogDataModel!.travelMode!.toString() ?? "N/A",
               ),
 
             if (_activeDayLogDataModel?.tourType != null)
               _buildDetailRow(
                 'Tour Type',
-                _activeDayLogDataModel!.tourType!.name ?? "N/A",
+                _activeDayLogDataModel!.tourType!.toString() ?? "N/A",
               ),
 
-            if (_activeDayLogDataModel?.partyId != null)
-              _buildDetailRow(
-                'Party ID',
-                _activeDayLogDataModel!.partyId.toString(),
-              ),
-
-            if (_activeDayLogDataModel?.placeVisit != null)
+            // if (_activeDayLogDataModel?.partyId != null)
+            //   _buildDetailRow(
+            //     'Party ID',
+            //     _activeDayLogDataModel!.partyId.toString(),
+            //   ),
+            if (_activeDayLogDataModel?.placeToVisit != null)
               _buildDetailRow(
                 'Place to Visit',
-                _activeDayLogDataModel!.placeVisit!,
+                _activeDayLogDataModel!.placeToVisit!,
               ),
           ],
         ),

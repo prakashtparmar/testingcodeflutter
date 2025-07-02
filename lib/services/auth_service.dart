@@ -22,8 +22,8 @@ class AuthService extends Service {
         'Accept': 'application/json',
       },
       body: jsonEncode({
-        'domain': domain,
-        'email': email,
+        'company_id': domain,
+        'login_id': email,
         'password': password,
       }),
     );

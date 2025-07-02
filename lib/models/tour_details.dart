@@ -1,5 +1,6 @@
 class TourDetails {
   final int? id;
+  final int? companyId;
   final String? name;
   final String? createdAt;
   final String? updatedAt;
@@ -7,6 +8,7 @@ class TourDetails {
 
   TourDetails({
     this.id,
+    this.companyId,
     this.name,
     this.createdAt,
     this.updatedAt,
@@ -16,6 +18,7 @@ class TourDetails {
   factory TourDetails.fromJson(Map<String, dynamic> json) {
     return TourDetails(
       id: json['id'],
+      companyId: json['company_id'],
       name: json['name'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
@@ -25,6 +28,7 @@ class TourDetails {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'company_id': companyId,
     'name': name,
     'created_at': createdAt,
     'updated_at': updatedAt,

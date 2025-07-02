@@ -8,6 +8,7 @@ class Service {
       apiLogout,
       apiTourDetails,
       apiDayLogs,
+      apiStartTrip,
       apiUserDetail,
       apiPartyUsers,
       apiDayLogStoreLocations,
@@ -27,12 +28,12 @@ class Service {
     apiLogout = "$baseUrl/logout"; // Proper URL concatenation
     apiTourDetails = "$baseUrl/tourDetails"; // Proper URL concatenation
     apiDayLogs = "$baseUrl/trips"; // Proper URL concatenation
-    apiUserDetail = "$baseUrl/userDetail"; // Proper URL concatenation
-    apiPartyUsers = "$baseUrl/partyUsers"; // Proper URL concatenation
+    apiStartTrip = "$baseUrl/trips/store"; // Proper URL concatenation
+    apiUserDetail = "$baseUrl/profile"; // Proper URL concatenation
+    apiPartyUsers = "$baseUrl/trip/customers"; // Proper URL concatenation
     apiDayLogStoreLocations =
-        "$baseUrl/dayLogs/storeLocations"; // Proper URL concatenation
-    apiDayLogCloseDayLog =
-        "$baseUrl/dayLogs/closeDayLog"; // Proper URL concatenation
+        "$baseUrl/trips/log-point"; // Proper URL concatenation
+    apiDayLogCloseDayLog = "$baseUrl/trip/close"; // Proper URL concatenation
     apiLocations = "$baseUrl/locations"; // Proper URL concatenation
     apiLeaves = "$baseUrl/leaves"; // Proper URL concatenation
     apiLeavesTypes = "$baseUrl/leavesTypes"; // Proper URL concatenation

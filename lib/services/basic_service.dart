@@ -4,11 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/active_day_log_response_model.dart';
 import 'package:snap_check/models/create_day_log_response_model.dart';
-import 'package:snap_check/models/day_log_data_model.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
-import 'package:snap_check/models/day_logs_data_model.dart';
 import 'package:snap_check/models/leave_request_response_model.dart';
 import 'package:snap_check/models/leave_types_response_model.dart';
 import 'package:snap_check/models/leaves_response_model.dart';
@@ -78,7 +76,7 @@ class BasicService extends Service {
     XFile? imageFile,
     Map<String, String> fields,
   ) async {
-    final uri = Uri.parse(apiDayLogs);
+    final uri = Uri.parse(apiStartTrip);
     final request = http.MultipartRequest('POST', uri);
     // Set headers (note: Content-Type will be set automatically)
     request.headers.addAll({
@@ -96,7 +94,7 @@ class BasicService extends Service {
     if (imageFile != null) {
       request.files.add(
         await http.MultipartFile.fromPath(
-          'opening_km_image', // key expected by your backend
+          'start_km_photo', // key expected by your backend
           imageFile.path,
           filename: basename(imageFile.path),
         ),
@@ -127,7 +125,7 @@ class BasicService extends Service {
 
   Future<DayLogStoreLocationResponseModel?> postDayLogLocations(
     String token,
-    Map<String, Object> body,
+    Map<String, dynamic> fields,
   ) async {
     final response = await http.post(
       Uri.parse(apiDayLogStoreLocations),
@@ -136,7 +134,7 @@ class BasicService extends Service {
         'Accept': 'application/json',
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode(body),
+      body: jsonEncode(fields),
     );
 
     return DayLogStoreLocationResponseModel.fromJson(_handleResponse(response));
@@ -148,7 +146,7 @@ class BasicService extends Service {
     Map<String, String> fields,
   ) async {
     final uri = Uri.parse(apiDayLogCloseDayLog);
-    final request = http.MultipartRequest('POST', uri);
+    final request = http.MultipartRequest('PUT', uri);
     // Set headers (note: Content-Type will be set automatically)
     request.headers.addAll({"Authorization": "Bearer $token"});
     // Add text fields (like date, place, km, etc.)
@@ -157,7 +155,7 @@ class BasicService extends Service {
     if (imageFile != null) {
       request.files.add(
         await http.MultipartFile.fromPath(
-          'closing_km_image', // key expected by your backend
+          'end_km_photo', // key expected by your backend
           imageFile.path,
           filename: basename(imageFile.path),
         ),

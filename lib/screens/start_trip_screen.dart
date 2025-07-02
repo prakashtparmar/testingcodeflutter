@@ -32,12 +32,16 @@ class _StartTripScreenState extends State<StartTripScreen> {
   ];
 
   // Dropdown items
-  List<String> travelModes = ["Car", "Bike", "Walk"];
+  List<TourDetails> tourPurposes = [];
   List<TourDetails> vehicleTypes = [];
   List<TourDetails> tourTypes = [];
+  TourDetails? selectedPurpose;
+  TourDetails? selectedVehicle;
+  TourDetails? selectedTourType;
+  PartyUsersDataModel? selectedParty;
   List<PartyUsersDataModel> parties = [];
 
-  String? selectedTravelMode, purpose;
+  String? selectedTravelMode, purpose, placeVisited, openingKm;
   XFile? imageFile;
   Position? currentPosition;
   GoogleMapController? mapController;
@@ -51,7 +55,62 @@ class _StartTripScreenState extends State<StartTripScreen> {
   }
 
   Future<void> _loadUser() async {
+    await _fetchTourDetails();
     _getCurrentLocation();
+  }
+
+  Future<void> _fetchTourDetails() async {
+    try {
+      final tokenData = await SharedPrefHelper.getToken();
+      setState(() => _isLoading = true);
+
+      final response = await _basicService.getTourDetails(tokenData!);
+      if (response != null && response.data != null) {
+        setState(() {
+          tourPurposes = response.data!.tourPurposes!;
+          vehicleTypes = response.data!.vehicleTypes!;
+          tourTypes = response.data!.tourTypes!;
+          parties = [];
+          selectedPurpose = response.data!.tourPurposes!.first;
+          selectedVehicle = response.data!.vehicleTypes!.first;
+          selectedTourType = response.data!.tourTypes!.first;
+        });
+        _fetchPartyUsers();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchPartyUsers() async {
+    try {
+      final tokenData = await SharedPrefHelper.getToken();
+      final response = await _basicService.getPartyUsers(tokenData!);
+      if (response != null && response.data != null) {
+        setState(() {
+          parties = response.data!;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching tour details: $e');
+      if (!mounted) {
+        return;
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -147,6 +206,12 @@ class _StartTripScreenState extends State<StartTripScreen> {
     }
   }
 
+  String to24HourFormat(TimeOfDay time) {
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat('HH:mm:ss').format(dt);
+  }
+
   void _submitForm() async {
     final tokenData = await SharedPrefHelper.getToken();
     if (_formKey.currentState?.validate() != true || imageFile == null) {
@@ -161,66 +226,128 @@ class _StartTripScreenState extends State<StartTripScreen> {
       _isLoading = true;
     });
     // Base form data
-    final Map<String, String> formData = {
-      "trip_date": apiFormat.format(_tripDate!),
-      "start_time": _startTime!.format(context),
-      "start_lat": "${currentPosition!.latitude}",
-      "start_lng": "${currentPosition!.longitude}",
-      "travel_mode": "$selectedTravelMode",
-      "purpose": "$purpose",
-    };
+    try {
+      final Map<String, String> formData = {
+        "trip_date": apiFormat.format(_tripDate!),
+        "start_time": to24HourFormat(_startTime!),
+        "start_lat": "${currentPosition!.latitude}",
+        "start_lng": "${currentPosition!.longitude}",
+        "purpose": "${selectedPurpose!.id}",
+        "travel_mode": "${selectedVehicle!.id}",
+        "tour_type": "${selectedTourType!.id}",
+        "place_to_visit": "$placeVisited",
+        "starting_km": "$openingKm",
+      };
 
-    CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
-        .postDayLog(tokenData!, imageFile, formData);
-    setState(() {
-      _isLoading = false;
-    });
-    if (postDayLogsResponseModel != null &&
-        postDayLogsResponseModel.success == true) {
-      if (!mounted) {
-        return;
-      }
-
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // Handle location services disabled
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          // Handle permissions denied
+      CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
+          .postDayLog(tokenData!, imageFile, formData);
+      setState(() {
+        _isLoading = false;
+      });
+      if (postDayLogsResponseModel != null &&
+          postDayLogsResponseModel.success == true) {
+        if (!mounted) {
           return;
         }
-      }
 
-      if (permission == LocationPermission.deniedForever) {
-        // Handle permissions permanently denied
-        return;
-      }
-      // Initialize
-      final locationService = LocationTrackingService();
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          // Handle location services disabled
+          return;
+        }
 
-      // Start tracking
-      bool started = await locationService.startTracking(
-        token: tokenData,
-        dayLogId: postDayLogsResponseModel.data!.id.toString(),
-      );
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            // Handle permissions denied
+            return;
+          }
+        }
 
-      if (started) {
-        if (mounted) Navigator.of(context).pop(true); // Close LiveMapScreen
+        if (permission == LocationPermission.deniedForever) {
+          // Handle permissions permanently denied
+          return;
+        }
+        // Initialize
+        final locationService = LocationTrackingService();
+
+        // Start tracking
+        bool started = await locationService.startTracking(
+          token: tokenData,
+          dayLogId: postDayLogsResponseModel.data!.id.toString(),
+        );
+
+        if (started) {
+          if (mounted) Navigator.of(context).pop(true); // Close LiveMapScreen
+        }
+      } else if (postDayLogsResponseModel != null &&
+          postDayLogsResponseModel.success == false) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(postDayLogsResponseModel.message!)),
+        );
       }
-    } else if (postDayLogsResponseModel != null &&
-        postDayLogsResponseModel.success == false) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(postDayLogsResponseModel.message!)),
-      );
+    } catch (e) {
+      debugPrint("_submitForm ${e.toString()}");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Widget _buildDropdownField(
+    String label,
+    List<TourDetails> items,
+    TourDetails? selected,
+    ValueChanged<TourDetails?> onChanged,
+  ) {
+    return DropdownButtonFormField<TourDetails>(
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(),
+      ),
+      value: selected,
+      items:
+          items
+              .map(
+                (e) => DropdownMenuItem<TourDetails>(
+                  value: e, // or e.id, based on your logic
+                  child: Text(e.name!),
+                ),
+              )
+              .toList(),
+      onChanged: onChanged,
+      validator: (val) => val == null ? 'Select $label' : null,
+    );
+  }
+
+  Widget _buildStringDropdownField(
+    String label,
+    List<PartyUsersDataModel> items,
+    PartyUsersDataModel? selected,
+    ValueChanged<PartyUsersDataModel?> onChanged,
+  ) {
+    return DropdownButtonFormField<PartyUsersDataModel>(
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(),
+      ),
+      value: selected,
+      items:
+          items
+              .map(
+                (e) => DropdownMenuItem<PartyUsersDataModel>(
+                  value: e, // or e.id, based on your logic
+                  child: Text(e.name!),
+                ),
+              )
+              .toList(),
+      onChanged: onChanged,
+      validator: (val) => val == null ? 'Select $label' : null,
+    );
   }
 
   @override
@@ -237,58 +364,114 @@ class _StartTripScreenState extends State<StartTripScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    InkWell(
-                      onTap: () => _selectDate(context),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Trip Date',
-                          border: OutlineInputBorder(),
-                        ),
-                        child: Text(
-                          _tripDate != null
-                              ? displayFormat.format(_tripDate!)
-                              : 'Select trip date',
-                          style: TextStyle(
-                            color:
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _selectDate(context),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Trip Date',
+                                border: OutlineInputBorder(),
+                              ),
+                              child: Text(
                                 _tripDate != null
-                                    ? Colors.black
-                                    : Colors.grey.shade600,
+                                    ? displayFormat.format(_tripDate!)
+                                    : 'Select trip date',
+                                style: TextStyle(
+                                  color:
+                                      _tripDate != null
+                                          ? Colors.black
+                                          : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _selectTime(context, true),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Start Time',
+                                border: OutlineInputBorder(),
+                              ),
+                              child: Text(
+                                _startTime != null
+                                    ? _startTime!.format(context)
+                                    : 'Select start time',
+                                style: TextStyle(
+                                  color:
+                                      _tripDate != null
+                                          ? Colors.black
+                                          : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
-                    InkWell(
-                      onTap: () => _selectTime(context, true),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Start Time',
-                          border: OutlineInputBorder(),
-                        ),
-                        child: Text(
-                          _startTime != null
-                              ? _startTime!.format(context)
-                              : 'Select start time',
-                          style: TextStyle(
-                            color:
-                                _tripDate != null
-                                    ? Colors.black
-                                    : Colors.grey.shade600,
-                          ),
-                        ),
-                      ),
+                    _buildDropdownField(
+                      'Tour Purpose',
+                      tourPurposes,
+                      selectedPurpose,
+                      (val) {
+                        setState(() {
+                          selectedPurpose = val;
+                          selectedParty = null;
+                        });
+                      },
                     ),
                     const SizedBox(height: 12),
 
                     _buildDropdownField(
-                      'Travel Mode',
-                      travelModes,
-                      selectedTravelMode,
+                      'Vehicle Type',
+                      vehicleTypes,
+                      selectedVehicle,
                       (val) {
-                        setState(() {
-                          selectedTravelMode = val;
-                        });
+                        setState(() => selectedVehicle = val);
                       },
+                    ),
+                    const SizedBox(height: 12),
+
+                    _buildDropdownField(
+                      'Tour Type',
+                      tourTypes,
+                      selectedTourType,
+                      (val) {
+                        setState(() => selectedTourType = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (selectedPurpose != null &&
+                        purposesWithParties.contains(selectedPurpose!.name))
+                      _buildStringDropdownField(
+                        'Select Party',
+                        parties,
+                        selectedParty,
+                        (val) {
+                          setState(() => selectedParty = val);
+                        },
+                      ),
+                    if (selectedPurpose != null &&
+                        purposesWithParties.contains(selectedPurpose!.name))
+                      const SizedBox(height: 12),
+
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Place Visited',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) => placeVisited = val,
+                      validator:
+                          (val) =>
+                              val == null || val.isEmpty
+                                  ? 'Enter place visited'
+                                  : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -296,12 +479,25 @@ class _StartTripScreenState extends State<StartTripScreen> {
                         labelText: 'Purpose',
                         border: OutlineInputBorder(),
                       ),
-                      maxLines: 3,
                       onChanged: (val) => purpose = val,
                       validator:
                           (val) =>
                               val == null || val.isEmpty
                                   ? 'Enter purpose'
+                                  : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Opening K.M.',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (val) => openingKm = val,
+                      validator:
+                          (val) =>
+                              val == null || val.isEmpty
+                                  ? 'Enter opening KM'
                                   : null,
                     ),
                     const SizedBox(height: 12),
@@ -421,32 +617,6 @@ class _StartTripScreenState extends State<StartTripScreen> {
             child: const Center(child: CircularProgressIndicator()),
           ),
       ],
-    );
-  }
-
-  Widget _buildDropdownField(
-    String label,
-    List<String> items,
-    String? selected,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(),
-      ),
-      value: selected,
-      items:
-          items
-              .map(
-                (e) => DropdownMenuItem<String>(
-                  value: e, // or e.id, based on your logic
-                  child: Text(e),
-                ),
-              )
-              .toList(),
-      onChanged: onChanged,
-      validator: (val) => val == null ? 'Select $label' : null,
     );
   }
 }

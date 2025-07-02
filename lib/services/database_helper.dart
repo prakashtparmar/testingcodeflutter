@@ -124,12 +124,9 @@ class DatabaseHelper {
     final id = await db.insert('users', userMap);
     final user = User(
       id: id,
-      firstName: firstName,
-      lastName: lastName,
       email: email,
       createdAt: DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
-      deletedAt: null,
     );
     return RegisterResponseModel.fromJson({
       'message': 'User registered successfully.',
@@ -366,7 +363,7 @@ class DatabaseHelper {
         insertedLocations.add(
           DayLogStoreLocationsDataModel(
             id: id,
-            dayLogId: dayLogId,
+            dayLogId: dayLogId.toString(),
             latitude: loc['latitude'],
             longitude: loc['longitude'],
             createdAt: now,

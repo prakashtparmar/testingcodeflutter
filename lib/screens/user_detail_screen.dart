@@ -54,6 +54,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (e) {
+      debugPrint(e.toString());
       _showError('Something went wrong. $e');
     } finally {
       setState(() {
@@ -73,17 +74,18 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
   }
 
   String _getFullAddress() {
-    List<String?> parts =
-        [
-          _user?.addressLine1,
-          _user?.addressLine2,
-          _user?.taluka?.name,
-          _user?.city?.name,
-          _user?.state?.name,
-          _user?.country?.name,
-        ].where((e) => e != null && e.trim().isNotEmpty).toList();
+    // List<String?> parts =
+    //     [
+    //       _user?.addressLine1,
+    //       _user?.addressLine2,
+    //       _user?.taluka?.name,
+    //       _user?.city?.name,
+    //       _user?.state?.name,
+    //       _user?.country?.name,
+    //     ].where((e) => e != null && e.trim().isNotEmpty).toList();
 
-    return parts.join(', ');
+    // return parts.join(', ');
+    return "N/A";
   }
 
   @override
@@ -127,7 +129,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              _user!.getName().trim(),
+                              _user!.name!.trim(),
                               style: textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -170,15 +172,13 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                             _infoRow(
                               icon: Icons.supervised_user_circle,
                               title: "Your Designation",
-                              value: _user?.designation?.name ?? 'N/A',
+                              value: _user?.designationId ?? 'N/A',
                             ),
                             const Divider(height: 30),
                             _infoRow(
                               icon: Icons.verified_user,
                               title: "Reporting to",
-                              value:
-                                  "${_user?.manager?.firstName ?? ''} ${_user?.manager?.lastName ?? ''}"
-                                      .trim(),
+                              value: (_user?.reportingTo ?? "N/A").trim(),
                             ),
                             const Divider(height: 30),
                             _infoRow(

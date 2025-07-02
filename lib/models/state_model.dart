@@ -1,4 +1,5 @@
 import 'package:snap_check/models/city_model.dart';
+import 'package:snap_check/models/district_model.dart';
 
 class StateModel {
   int? id;
@@ -8,6 +9,7 @@ class StateModel {
   String? updatedAt;
   String? deletedAt;
   List<CityModel>? cities;
+  List<DistrictModel>? districts;
 
   StateModel({
     this.id,
@@ -32,6 +34,12 @@ class StateModel {
         cities!.add(CityModel.fromJson(v));
       });
     }
+    if (json['districts'] != null) {
+      districts = <DistrictModel>[];
+      json['districts'].forEach((v) {
+        districts!.add(DistrictModel.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -45,8 +53,12 @@ class StateModel {
     if (cities != null) {
       data['cities'] = cities!.map((v) => v.toJson()).toList();
     }
+    if (districts != null) {
+      data['districts'] = districts!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

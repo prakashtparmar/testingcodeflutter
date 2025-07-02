@@ -186,10 +186,9 @@ class LocationTrackingService {
     double longitude,
   ) async {
     final locationPayload = {
-      "day_log_id": dayLogId,
-      "locations": [
-        {"latitude": latitude, "longitude": longitude},
-      ],
+      "trip_id": dayLogId,
+      "latitude": latitude,
+      "longitude": longitude,
     };
 
     if (!_isConnected) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
 import 'package:snap_check/services/share_pref.dart';
 import '../services/auth_service.dart';
@@ -101,22 +100,31 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Mobile or Email',
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
+                      keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Email is required';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Mobile or Email is required';
                         }
+
                         final emailRegex = RegExp(
                           r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                         );
-                        if (!emailRegex.hasMatch(value)) {
-                          return 'Enter a valid email';
+                        final mobileRegex = RegExp(
+                          r'^\d{10}$',
+                        ); // Simple 10-digit mobile
+
+                        if (!emailRegex.hasMatch(value.trim()) &&
+                            !mobileRegex.hasMatch(value.trim())) {
+                          return 'Enter a valid mobile number or email address';
                         }
+
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
@@ -143,25 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          "Forgot Password?",
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
