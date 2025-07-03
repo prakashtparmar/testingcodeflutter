@@ -18,7 +18,8 @@ class Service {
       apiLeavesTypes,
       apiChangePassword,
       apiLeaveRequest,
-      apiActiveDayLog;
+      apiActiveDayLog,
+      apiTripDetail;
 
   // Constructor to initialize apiLogin
   Service() {
@@ -40,5 +41,6 @@ class Service {
     apiChangePassword = "$baseUrl/changePassword"; // Proper URL concatenation
     apiLeaveRequest = "$baseUrl/leaves"; // Proper URL concatenation
     apiActiveDayLog = "$baseUrl/trip/active"; // Proper URL concatenation
+    apiTripDetail = "$baseUrl/trip/ID/detail"; // Proper URL concatenation
   }
 }

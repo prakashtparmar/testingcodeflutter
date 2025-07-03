@@ -24,7 +24,7 @@ class LocationTrackingService {
   // Configuration
   static const int _locationInterval = 30; // seconds
   static const int _maxRetryAttempts = 3;
-  static const Duration _locationTimeout = Duration(seconds: 15);
+  static const Duration _locationTimeout = Duration(seconds: 30);
   static const Duration _apiTimeout = Duration(seconds: 10);
 
   bool get isTracking => _isTracking;

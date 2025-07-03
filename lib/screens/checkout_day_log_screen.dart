@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
+import 'package:snap_check/models/day_log_detail_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
@@ -25,6 +26,8 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
   Position? currentPosition;
   ActiveDayLogDataModel? _activeDayLogDataModel;
   bool _isSubmitting = false;
+  DayLogDetailDataModel? dayLogDetailModel;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -106,24 +109,28 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         );
         return;
       }
-      // final tokenData = await SharedPrefHelper.getToken();
-      // final logDetail = await BasicService().getDayLogDetail(
-      //   tokenData!,
-      //   _activeDayLogDataModel!.id!,
-      // );
+      final tokenData = await SharedPrefHelper.getToken();
+      final logDetail = await BasicService().getDayLogDetail(
+        tokenData!,
+        _activeDayLogDataModel!.id!,
+      );
 
-      // if (logDetail != null) {
-      //   setState(() {
-      //     dayLogDetailModel = logDetail.data;
-      //   });
-      // }
+      if (logDetail != null) {
+        setState(() {
+          _isLoading = false;
+          dayLogDetailModel = logDetail.data;
+        });
+      }
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       if (mounted) {
-        setState(() => currentPosition = position);
+        setState(() {
+          _isLoading = false;
+          currentPosition = position;
+        });
       }
     } catch (e) {
       debugPrint('Location error: $e');
@@ -135,6 +142,10 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
           ),
         );
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -187,7 +198,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
           duration: const Duration(seconds: 5),
         );
 
-        Navigator.of(context).pop(); // Return success
+        Navigator.pop(context, true); // Sends 'true' back to the caller
       } else {
         SnackBar(
           content: Text('Error: ${response?.message}'),
@@ -196,13 +207,13 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
       }
     } catch (e) {
       debugPrint("submit failed ${e.toString()}");
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
       SnackBar(
         content: Text('Error: ${e.toString()}'),
         duration: const Duration(seconds: 5),
       );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     } finally {
       debugPrint("submit finally");
       if (mounted) {
@@ -222,29 +233,26 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Basic info
-            if (_activeDayLogDataModel?.startingKm != null)
-              _buildDetailRow(
-                'Opening KM',
-                _activeDayLogDataModel!.startingKm!,
-              ),
+            if (dayLogDetailModel?.startingKm != null)
+              _buildDetailRow('Opening KM', dayLogDetailModel!.startingKm!),
 
             // Tour details
-            if (_activeDayLogDataModel?.purpose != null)
+            if (dayLogDetailModel?.purpose != null)
               _buildDetailRow(
                 'Purpose',
-                _activeDayLogDataModel!.purpose.toString() ?? "N/A",
+                dayLogDetailModel!.purpose?.name ?? "N/A",
               ),
 
-            if (_activeDayLogDataModel?.travelMode != null)
+            if (dayLogDetailModel?.travelMode != null)
               _buildDetailRow(
-                'Vehicle',
-                _activeDayLogDataModel!.travelMode!.toString() ?? "N/A",
+                'Travel Mode',
+                dayLogDetailModel!.travelMode!.name ?? "N/A",
               ),
 
-            if (_activeDayLogDataModel?.tourType != null)
+            if (dayLogDetailModel?.tourType != null)
               _buildDetailRow(
                 'Tour Type',
-                _activeDayLogDataModel!.tourType!.toString() ?? "N/A",
+                dayLogDetailModel!.tourType!.name ?? "N/A",
               ),
 
             // if (_activeDayLogDataModel?.partyId != null)
@@ -252,10 +260,10 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
             //     'Party ID',
             //     _activeDayLogDataModel!.partyId.toString(),
             //   ),
-            if (_activeDayLogDataModel?.placeToVisit != null)
+            if (dayLogDetailModel?.placeToVisit != null)
               _buildDetailRow(
                 'Place to Visit',
-                _activeDayLogDataModel!.placeToVisit!,
+                dayLogDetailModel!.placeToVisit!,
               ),
           ],
         ),
@@ -440,7 +448,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
             ),
           ),
         ),
-        if (_isSubmitting)
+        if (_isSubmitting || _isLoading)
           Container(
             color: Colors.black.withAlpha((0.4 * 255).round()),
             child: const Center(child: CircularProgressIndicator()),

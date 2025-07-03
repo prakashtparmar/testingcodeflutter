@@ -112,7 +112,7 @@ class BasicService extends Service {
     int dayLog,
   ) async {
     final response = await http.get(
-      Uri.parse('$apiDayLogs/$dayLog'),
+      Uri.parse(apiTripDetail.replaceAll("ID", dayLog.toString())),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -146,8 +146,9 @@ class BasicService extends Service {
     Map<String, String> fields,
   ) async {
     final uri = Uri.parse(apiDayLogCloseDayLog);
-    final request = http.MultipartRequest('PUT', uri);
+    final request = http.MultipartRequest('POST', uri);
     // Set headers (note: Content-Type will be set automatically)
+    request.headers.addAll({"Accept": "application/json"});
     request.headers.addAll({"Authorization": "Bearer $token"});
     // Add text fields (like date, place, km, etc.)
     request.fields.addAll(fields);

@@ -109,9 +109,9 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
       _filteredLogs =
           _allLogs.where((log) {
             final placeMatch =
-                log.placeVisit?.toLowerCase().contains(query) ?? false;
+                log.placeToVisit?.toLowerCase().contains(query) ?? false;
             final purposeMatch =
-                log.tourPurpose?.name?.toLowerCase().contains(query) ?? false;
+                log.purpose?.name?.toLowerCase().contains(query) ?? false;
             return placeMatch || purposeMatch;
           }).toList();
     });
@@ -241,7 +241,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
   Widget _buildLogCard(DayLogsDataModel log) {
     final theme = Theme.of(context);
-    final hasClosingKm = log.closingKm != null;
+    final hasClosingKm = log.status == "completed";
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -255,61 +255,125 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with date and status
+              // Header with date and status - FIXED OVERFLOW
               Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: theme.primaryColor,
+                  Flexible(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: theme.primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            DateFormat(
+                              'MMM dd, yyyy hh:mm a',
+                            ).format(DateTime.parse(log.createdAt!)),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    DateFormat(
-                      'MMM dd, yyyy hh:mm a',
-                    ).format(DateTime.parse(log.createdAt!)),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const Spacer(),
                   if (hasClosingKm)
-                    Chip(
-                      label: const Text('Completed'),
-                      backgroundColor: Colors.green[50],
-                      labelStyle: const TextStyle(color: Colors.green),
+                    Flexible(
+                      child: Chip(
+                        label: const Text('Completed'),
+                        backgroundColor: Colors.green[50],
+                        labelStyle: const TextStyle(color: Colors.green),
+                      ),
                     ),
+                  if (log.approvalStatus != null) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Chip(
+                        label: Text(
+                          log.approvalStatus!.toUpperCase(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: _getApprovalColor(log.approvalStatus!),
+                        labelStyle: TextStyle(
+                          color: _getApprovalTextColor(log.approvalStatus!),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
 
-              // Log details
+              // Rest of your existing content...
               _buildInfoRow(
                 Icons.place,
-                log.placeVisit ?? 'No location specified',
+                log.placeToVisit ?? 'No location specified',
               ),
               _buildInfoRow(
                 Icons.work,
-                log.tourPurpose?.name ?? 'No purpose specified',
+                log.purpose?.name ?? 'No purpose specified',
               ),
 
-              // Tracking button for incomplete logs
-              if (!hasClosingKm) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.directions_walk, size: 20),
-                    label: const Text('Start Tracking'),
-                    onPressed: () => _navigateToTracking(log),
+              if (log.approvalReason != null && log.approvalStatus != 'pending')
+                const SizedBox(height: 8),
+              if (log.approvalReason != null && log.approvalStatus != 'pending')
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Reason: ${log.approvalReason}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  // Add these helper methods to your class
+  Color _getApprovalColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green[50]!;
+      case 'rejected':
+        return Colors.red[50]!;
+      case 'pending':
+        return Colors.orange[50]!;
+      default:
+        return Colors.grey[200]!;
+    }
+  }
+
+  Color _getApprovalTextColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'pending':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String text) {

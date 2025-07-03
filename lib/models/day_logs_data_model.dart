@@ -4,128 +4,129 @@ import 'package:snap_check/models/user_model.dart';
 class DayLogsDataModel {
   int? id;
   int? userId;
-  int? tourPurposeId;
-  int? vehicleTypeId;
-  int? tourTypeId;
-  int? partyId;
-  String? placeVisit;
-  String? openingKm;
-  String? openingKmImage;
-  String? openingKmLatitude;
-  String? openingKmLongitude;
-  String? closingKm;
-  String? closingKmImage;
-  String? closingKmLatitude;
-  String? closingKmLongitude;
-  String? note;
+  int? companyId;
+  String? tripDate;
+  String? startTime;
+  String? endTime;
+  String? startLat;
+  String? startLng;
+  String? endLat;
+  String? endLng;
+  String? totalDistanceKm;
+  String? placeToVisit;
+  String? closenote;
+  String? startingKm;
+  String? endKm;
+  String? startKmPhoto;
+  String? endKmPhoto;
+  String? status;
   String? approvalStatus;
   User? approvedBy;
   String? approvalReason;
   String? approvedAt;
   String? createdAt;
   String? updatedAt;
-  String? deletedAt;
-  TourDetails? tourPurpose;
-  TourDetails? vehicleType;
+  TourDetails? travelMode;
+  TourDetails? purpose;
   TourDetails? tourType;
 
   DayLogsDataModel({
     this.id,
     this.userId,
-    this.tourPurposeId,
-    this.vehicleTypeId,
-    this.tourTypeId,
-    this.partyId,
-    this.placeVisit,
-    this.openingKm,
-    this.openingKmImage,
-    this.openingKmLatitude,
-    this.openingKmLongitude,
-    this.closingKm,
-    this.closingKmImage,
-    this.closingKmLatitude,
-    this.closingKmLongitude,
-    this.note,
+    this.companyId,
+    this.tripDate,
+    this.startTime,
+    this.endTime,
+    this.startLat,
+    this.startLng,
+    this.endLat,
+    this.endLng,
+    this.totalDistanceKm,
+    this.placeToVisit,
+    this.closenote,
+    this.startingKm,
+    this.endKm,
+    this.startKmPhoto,
+    this.endKmPhoto,
+    this.status,
     this.approvalStatus,
     this.approvedBy,
     this.approvalReason,
     this.approvedAt,
     this.createdAt,
     this.updatedAt,
-    this.deletedAt,
-    this.tourPurpose,
-    this.vehicleType,
+    this.travelMode,
+    this.purpose,
     this.tourType,
   });
 
   DayLogsDataModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     userId = json['user_id'];
-    tourPurposeId = json['tour_purpose_id'];
-    vehicleTypeId = json['vehicle_type_id'];
-    tourTypeId = json['tour_type_id'];
-    partyId = json['party_id'];
-    placeVisit = json['place_visit'];
-    openingKm = json['opening_km'];
-    openingKmImage = json['opening_km_image'];
-    openingKmLatitude = json['opening_km_latitude'];
-    openingKmLongitude = json['opening_km_longitude'];
-    closingKm = json['closing_km'];
-    closingKmImage = json['closing_km_image'];
-    closingKmLatitude = json['closing_km_latitude'];
-    closingKmLongitude = json['closing_km_longitude'];
-    note = json['note'];
+    companyId = json['company_id'];
+    tripDate = json['trip_date'];
+    startTime = json['start_time'];
+    endTime = json['end_time'];
+    startLat = json['start_lat'];
+    startLng = json['start_lng'];
+    endLat = json['end_lat'];
+    endLng = json['end_lng'];
+    totalDistanceKm = json['total_distance_km'];
+    placeToVisit = json['place_to_visit'];
+    closenote = json['closenote'];
+    startingKm = json['starting_km'];
+    endKm = json['end_km'];
+    startKmPhoto = json['start_km_photo'];
+    endKmPhoto = json['end_km_photo'];
+    status = json['status'];
     approvalStatus = json['approval_status'];
     approvedBy = json['approved_by'];
     approvalReason = json['approval_reason'];
     approvedAt = json['approved_at'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
-    deletedAt = json['deleted_at'];
-    tourPurpose =
-        json['tour_purpose'] != null
-            ? TourDetails.fromJson(json['tour_purpose'])
-            : null;
-    vehicleType =
-        json['vehicle_type'] != null
-            ? TourDetails.fromJson(json['vehicle_type'])
-            : null;
-    tourType =
-        json['tour_type'] != null
-            ? TourDetails.fromJson(json['tour_type'])
-            : null;
+    travelMode = json['travel_mode'] != null
+        ? TourDetails.fromJson(json['travel_mode'])
+        : null;
+    purpose = json['purpose'] != null
+        ? TourDetails.fromJson(json['purpose'])
+        : null;
+    tourType = json['tour_type'] != null
+        ? TourDetails.fromJson(json['tour_type'])
+        : null;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
     data['user_id'] = userId;
-    data['tour_purpose_id'] = tourPurposeId;
-    data['vehicle_type_id'] = vehicleTypeId;
-    data['tour_type_id'] = tourTypeId;
-    data['party_id'] = partyId;
-    data['place_visit'] = placeVisit;
-    data['opening_km'] = openingKm;
-    data['opening_km_image'] = openingKmImage;
-    data['opening_km_latitude'] = openingKmLatitude;
-    data['opening_km_longitude'] = openingKmLongitude;
-    data['closing_km'] = closingKm;
-    data['closing_km_image'] = closingKmImage;
-    data['closing_km_latitude'] = closingKmLatitude;
-    data['closing_km_longitude'] = closingKmLongitude;
-    data['note'] = note;
+    data['company_id'] = companyId;
+    data['trip_date'] = tripDate;
+    data['start_time'] = startTime;
+    data['end_time'] = endTime;
+    data['start_lat'] = startLat;
+    data['start_lng'] = startLng;
+    data['end_lat'] = endLat;
+    data['end_lng'] = endLng;
+    data['total_distance_km'] = totalDistanceKm;
+    data['place_to_visit'] = placeToVisit;
+    data['closenote'] = closenote;
+    data['starting_km'] = startingKm;
+    data['end_km'] = endKm;
+    data['start_km_photo'] = startKmPhoto;
+    data['end_km_photo'] = endKmPhoto;
+    data['status'] = status;
     data['approval_status'] = approvalStatus;
     data['approved_by'] = approvedBy;
     data['approval_reason'] = approvalReason;
     data['approved_at'] = approvedAt;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
-    data['deleted_at'] = deletedAt;
-    if (tourPurpose != null) {
-      data['tour_purpose'] = tourPurpose!.toJson();
+    if (travelMode != null) {
+      data['travel_mode'] = travelMode!.toJson();
     }
-    if (vehicleType != null) {
-      data['vehicle_type'] = vehicleType!.toJson();
+    if (purpose != null) {
+      data['purpose'] = purpose!.toJson();
     }
     if (tourType != null) {
       data['tour_type'] = tourType!.toJson();

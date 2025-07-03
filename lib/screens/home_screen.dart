@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         debugPrint("started $started");
       } else {
+        _activeDayLogDataModel = null;
         SharedPrefHelper.clearActiveDayLog();
         final locationService = LocationTrackingService();
         // Stop tracking
@@ -84,12 +85,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (e is UnauthorizedException) {
+        _activeDayLogDataModel = null;
         setState(() {
           _isLoading = false;
         });
         SharedPrefHelper.clearUser();
         _redirectToLogin();
       } else if (e is NotFoundException) {
+        _activeDayLogDataModel = null;
         SharedPrefHelper.clearActiveDayLog();
         final locationService = LocationTrackingService();
         // Stop tracking
