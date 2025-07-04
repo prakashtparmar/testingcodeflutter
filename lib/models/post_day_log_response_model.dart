@@ -1,18 +1,11 @@
 import 'package:snap_check/models/post_day_log_data_model.dart';
-import 'package:snap_check/models/post_day_logs_error_model.dart';
 
 class PostDayLogsResponseModel {
   bool? success;
   PostDayLogDataModel? data;
   String? message;
-  PostDayLogErrorModel? errors;
 
-  PostDayLogsResponseModel({
-    this.success,
-    this.data,
-    this.message,
-    this.errors,
-  });
+  PostDayLogsResponseModel({this.success, this.data, this.message});
 
   PostDayLogsResponseModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
@@ -21,10 +14,6 @@ class PostDayLogsResponseModel {
             ? PostDayLogDataModel.fromJson(json['data'])
             : null;
     message = json['message'];
-    errors =
-        json['errors'] != null
-            ? PostDayLogErrorModel.fromJson(json['errors'])
-            : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -34,9 +23,7 @@ class PostDayLogsResponseModel {
       data['data'] = this.data!.toJson();
     }
     data['message'] = message;
-    if (errors != null) {
-      data['errors'] = errors!.toJson();
-    }
+
     return data;
   }
 }

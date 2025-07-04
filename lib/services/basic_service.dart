@@ -80,9 +80,8 @@ class BasicService extends Service {
     final request = http.MultipartRequest('POST', uri);
     // Set headers (note: Content-Type will be set automatically)
     request.headers.addAll({
-      "Authorization": "Bearer $token",
       "Accept": "application/json",
-      "Content-type": "application/json",
+      "Authorization": "Bearer $token",
     });
     // Add text fields (like date, place, km, etc.)
 
@@ -103,8 +102,9 @@ class BasicService extends Service {
     // Send the request
     final response = await request.send();
 
-    final responseString = await response.stream.bytesToString();
-    return CreateDayLogResponseModel.fromJson(jsonDecode(responseString));
+    return CreateDayLogResponseModel.fromJson(
+      _handleResponseMultiPart(response),
+    );
   }
 
   Future<DayLogDetailResponseModel?> getDayLogDetail(
@@ -164,8 +164,9 @@ class BasicService extends Service {
     }
     // Send the request
     final response = await request.send();
-    final responseString = await response.stream.bytesToString();
-    return PostDayLogsResponseModel.fromJson(jsonDecode(responseString));
+    return PostDayLogsResponseModel.fromJson(
+      _handleResponseMultiPart(response),
+    );
   }
 
   Future<LeavesResponseModel?> getLeaves(String token) async {
@@ -233,6 +234,33 @@ class BasicService extends Service {
     switch (response.statusCode) {
       case 200:
         return jsonDecode(response.body);
+
+      case 401:
+        throw UnauthorizedException();
+
+      case 404:
+        throw NotFoundException();
+
+      case 500:
+        throw ServerErrorException();
+
+      default:
+        throw UnknownApiException(
+          response.statusCode,
+          response.reasonPhrase ?? 'Unexpected error',
+        );
+    }
+  }
+
+  dynamic _handleResponseMultiPart(http.StreamedResponse response) async {
+    debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response Headers: ${response.request!.headers.values}');
+    debugPrint('Response status: ${response.statusCode}');
+    debugPrint('Response body: ${await response.stream.bytesToString()}');
+
+    switch (response.statusCode) {
+      case 200:
+        return jsonDecode(await response.stream.bytesToString());
 
       case 401:
         throw UnauthorizedException();

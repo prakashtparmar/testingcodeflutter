@@ -203,12 +203,8 @@ class _LeavesListScreenState extends State<LeavesListScreen> {
                 trimMode: TrimMode.Line,
                 trimCollapsedText: ' Read more',
                 trimExpandedText: ' Read less',
-                moreStyle: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.primaryColor),
-                lessStyle: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.primaryColor),
+                moreStyle: Theme.of(context).textTheme.bodySmall,
+                lessStyle: Theme.of(context).textTheme.bodySmall,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey.shade700,
                   fontStyle: FontStyle.italic,

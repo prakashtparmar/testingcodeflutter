@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/tour_details.dart';
@@ -10,7 +12,6 @@ import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class StartTripScreen extends StatefulWidget {
   const StartTripScreen({super.key});
@@ -43,7 +44,6 @@ class _StartTripScreenState extends State<StartTripScreen> {
   String? selectedTravelMode, purpose, placeVisited, openingKm;
   XFile? imageFile;
   Position? currentPosition;
-  GoogleMapController? mapController;
   bool _isLoading = false;
 
   final _formKey = GlobalKey<FormState>();
@@ -54,6 +54,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
   }
 
   Future<void> _loadUser() async {
+    await Permission.storage.request();
     await _fetchTourDetails();
     _getCurrentLocation();
   }
@@ -177,6 +178,36 @@ class _StartTripScreenState extends State<StartTripScreen> {
     }
   }
 
+  Future<void> checkImageSize(XFile? imageFile) async {
+    if (imageFile == null) {
+      print("No image selected");
+      return;
+    }
+
+    // Convert XFile to File
+    final file = File(imageFile.path);
+
+    // Check if file exists
+    if (await file.exists()) {
+      // Get file size in bytes
+      final bytes = await file.length();
+      final kb = bytes / 1024;
+      final mb = kb / 1024;
+
+      print("Image path: ${imageFile.path}");
+      print("Size in bytes: $bytes");
+      print("Size in KB: ${kb.toStringAsFixed(2)}");
+      print("Size in MB: ${mb.toStringAsFixed(2)}");
+
+      // Example: Validate max size (5MB)
+      if (mb > 5) {
+        throw Exception("Image must be less than 5MB");
+      }
+    } else {
+      print("File does not exist at path: ${imageFile.path}");
+    }
+  }
+
   String to24HourFormat(TimeOfDay time) {
     final now = DateTime.now();
     final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
@@ -199,8 +230,6 @@ class _StartTripScreenState extends State<StartTripScreen> {
     // Base form data
     try {
       final Map<String, String> formData = {
-        "trip_date": apiFormat.format(DateTime.now()),
-        "start_time": to24HourFormat(TimeOfDay.now()),
         "start_lat": "${currentPosition!.latitude}",
         "start_lng": "${currentPosition!.longitude}",
         "purpose": "${selectedPurpose!.id}",
@@ -212,11 +241,21 @@ class _StartTripScreenState extends State<StartTripScreen> {
 
       if (selectedPurpose != null &&
           !purposesWithParties.contains(selectedPurpose!.name)) {
-        selectedParty.forEach(
-          (element) => {formData["customer_ids[]"] = element.id.toString()},
-        );
+        if (selectedParty.isNotEmpty) {
+          for (final element in selectedParty) {
+            if (element.id != null) {
+              formData["customer_ids[]"] = element.id.toString();
+            }
+          }
+        }
       }
-
+      if (imageFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("File not found: ${imageFile!.path}")),
+        );
+        return;
+      }
+      checkImageSize(imageFile);
       CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
           .postDayLog(tokenData!, imageFile, formData);
       setState(() {
@@ -267,6 +306,9 @@ class _StartTripScreenState extends State<StartTripScreen> {
         );
       }
     } catch (e) {
+      setState(() {
+        _isLoading = true;
+      });
       debugPrint("_submitForm ${e.toString()}");
       ScaffoldMessenger.of(
         context,
@@ -345,8 +387,10 @@ class _StartTripScreenState extends State<StartTripScreen> {
                     ),
                     TextButton(
                       onPressed:
-                          () =>
-                              Navigator.pop(context, List<PartyUsersDataModel>.from(selectedItems)),
+                          () => Navigator.pop(
+                            context,
+                            List<PartyUsersDataModel>.from(selectedItems),
+                          ),
                       child: const Text('OK'),
                     ),
                   ],
@@ -557,9 +601,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
                               ),
                             ),
                           },
-                          onMapCreated: (controller) {
-                            mapController = controller;
-                          },
+                          onMapCreated: (controller) {},
                           myLocationEnabled: true,
                           myLocationButtonEnabled: true,
                           zoomControlsEnabled: false,
