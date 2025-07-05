@@ -340,7 +340,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                     validator:
                         (val) =>
                             val == null || val.isEmpty
-                                ? 'Enter Closing KM'
+                                ? 'Enter Notes'
                                 : null,
                   ),
 

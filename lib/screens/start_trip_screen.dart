@@ -7,11 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
+import 'package:snap_check/models/start_trip_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
 
 class StartTripScreen extends StatefulWidget {
   const StartTripScreen({super.key});
@@ -178,9 +181,30 @@ class _StartTripScreenState extends State<StartTripScreen> {
     }
   }
 
+  Future<XFile?> compressAndReturnXFile(XFile imageFile) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final targetPath =
+          '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        imageFile.path,
+        targetPath,
+        quality: 70, // 0-100
+        minWidth: 800, // optional
+        minHeight: 800, // optional
+      );
+
+      return compressedFile != null ? XFile(compressedFile.path) : null;
+    } catch (e) {
+      debugPrint('Compression error: $e');
+      return null;
+    }
+  }
+
   Future<void> checkImageSize(XFile? imageFile) async {
     if (imageFile == null) {
-      print("No image selected");
+      debugPrint("No image selected");
       return;
     }
 
@@ -194,17 +218,17 @@ class _StartTripScreenState extends State<StartTripScreen> {
       final kb = bytes / 1024;
       final mb = kb / 1024;
 
-      print("Image path: ${imageFile.path}");
-      print("Size in bytes: $bytes");
-      print("Size in KB: ${kb.toStringAsFixed(2)}");
-      print("Size in MB: ${mb.toStringAsFixed(2)}");
+      debugPrint("Image path: ${imageFile.path}");
+      debugPrint("Size in bytes: $bytes");
+      debugPrint("Size in KB: ${kb.toStringAsFixed(2)}");
+      debugPrint("Size in MB: ${mb.toStringAsFixed(2)}");
 
       // Example: Validate max size (5MB)
       if (mb > 5) {
         throw Exception("Image must be less than 5MB");
       }
     } else {
-      print("File does not exist at path: ${imageFile.path}");
+      debugPrint("File does not exist at path: ${imageFile.path}");
     }
   }
 
@@ -242,9 +266,9 @@ class _StartTripScreenState extends State<StartTripScreen> {
       if (selectedPurpose != null &&
           !purposesWithParties.contains(selectedPurpose!.name)) {
         if (selectedParty.isNotEmpty) {
-          for (final element in selectedParty) {
-            if (element.id != null) {
-              formData["customer_ids[]"] = element.id.toString();
+          for (int i = 0; i < selectedParty.length; i++) {
+            if (selectedParty[i].id != null) {
+              formData["customer_ids[$i]"] = selectedParty[i].id.toString();
             }
           }
         }
@@ -256,8 +280,10 @@ class _StartTripScreenState extends State<StartTripScreen> {
         return;
       }
       checkImageSize(imageFile);
-      CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
-          .postDayLog(tokenData!, imageFile, formData);
+      final XFile? compressedXFile = await compressAndReturnXFile(imageFile!);
+
+      StartTripResponseModel? postDayLogsResponseModel = await _basicService
+          .postDayLog(tokenData!, compressedXFile, formData);
       setState(() {
         _isLoading = false;
       });
@@ -307,7 +333,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
       }
     } catch (e) {
       setState(() {
-        _isLoading = true;
+        _isLoading = false;
       });
       debugPrint("_submitForm ${e.toString()}");
       ScaffoldMessenger.of(

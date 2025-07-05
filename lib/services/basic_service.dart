@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/active_day_log_response_model.dart';
-import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/day_log_detail_response_model.dart';
 import 'package:snap_check/models/day_log_response_model.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
@@ -13,6 +12,7 @@ import 'package:snap_check/models/leaves_response_model.dart';
 import 'package:snap_check/models/locations_response_model.dart';
 import 'package:snap_check/models/party_user_response_model.dart';
 import 'package:snap_check/models/post_day_log_response_model.dart';
+import 'package:snap_check/models/start_trip_response_model.dart';
 import 'package:snap_check/models/tour_details_response_model.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/service.dart';
@@ -71,7 +71,7 @@ class BasicService extends Service {
     return PartyUsersResponseModel.fromJson(_handleResponse(response));
   }
 
-  Future<CreateDayLogResponseModel?> postDayLog(
+  Future<StartTripResponseModel?> postDayLog(
     String token,
     XFile? imageFile,
     Map<String, String> fields,
@@ -101,10 +101,9 @@ class BasicService extends Service {
     }
     // Send the request
     final response = await request.send();
+    final responseFormat = await response.stream.bytesToString();
 
-    return CreateDayLogResponseModel.fromJson(
-      _handleResponseMultiPart(response),
-    );
+    return StartTripResponseModel.fromJson(jsonDecode(responseFormat));
   }
 
   Future<DayLogDetailResponseModel?> getDayLogDetail(
@@ -164,9 +163,9 @@ class BasicService extends Service {
     }
     // Send the request
     final response = await request.send();
-    return PostDayLogsResponseModel.fromJson(
-      _handleResponseMultiPart(response),
-    );
+    final responseFormat = await response.stream.bytesToString();
+
+    return PostDayLogsResponseModel.fromJson(jsonDecode(responseFormat));
   }
 
   Future<LeavesResponseModel?> getLeaves(String token) async {
@@ -234,33 +233,6 @@ class BasicService extends Service {
     switch (response.statusCode) {
       case 200:
         return jsonDecode(response.body);
-
-      case 401:
-        throw UnauthorizedException();
-
-      case 404:
-        throw NotFoundException();
-
-      case 500:
-        throw ServerErrorException();
-
-      default:
-        throw UnknownApiException(
-          response.statusCode,
-          response.reasonPhrase ?? 'Unexpected error',
-        );
-    }
-  }
-
-  dynamic _handleResponseMultiPart(http.StreamedResponse response) async {
-    debugPrint('Response URL: ${response.request!.url.path}');
-    debugPrint('Response Headers: ${response.request!.headers.values}');
-    debugPrint('Response status: ${response.statusCode}');
-    debugPrint('Response body: ${await response.stream.bytesToString()}');
-
-    switch (response.statusCode) {
-      case 200:
-        return jsonDecode(await response.stream.bytesToString());
 
       case 401:
         throw UnauthorizedException();

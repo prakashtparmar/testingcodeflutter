@@ -1,37 +1,49 @@
 class DayLogStoreLocationsDataModel {
-  int? id;
-  String? dayLogId;
+  String? tripId;
   double? latitude;
   double? longitude;
-  String? createdAt;
+  String? batteryPercentage;
+  String? recordedAt;
   String? updatedAt;
+  String? createdAt;
+  String? gpsStatus;
+  int? id;
 
   DayLogStoreLocationsDataModel({
-    this.id,
-    this.dayLogId,
+    this.tripId,
     this.latitude,
     this.longitude,
-    this.createdAt,
+    this.batteryPercentage,
+    this.recordedAt,
     this.updatedAt,
+    this.createdAt,
+    this.gpsStatus,
+    this.id,
   });
 
   DayLogStoreLocationsDataModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    dayLogId = json['day_log_id'];
+    tripId = json['trip_id'];
     latitude = json['latitude'];
     longitude = json['longitude'];
-    createdAt = json['created_at'];
+    batteryPercentage = json['battery_percentage'];
+    recordedAt = json['recorded_at'];
     updatedAt = json['updated_at'];
+    createdAt = json['created_at'];
+    gpsStatus = json['gps_status'];
+    id = json['id'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['day_log_id'] = dayLogId;
+    data['trip_id'] = tripId;
     data['latitude'] = latitude;
     data['longitude'] = longitude;
-    data['created_at'] = createdAt;
+    data['battery_percentage'] = batteryPercentage;
+    data['recorded_at'] = recordedAt;
     data['updated_at'] = updatedAt;
+    data['created_at'] = createdAt;
+    data['gps_status'] = gpsStatus;
+    data['id'] = id;
     return data;
   }
 }

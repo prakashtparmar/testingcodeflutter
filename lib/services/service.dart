@@ -1,6 +1,6 @@
 class Service {
   final String baseUrl =
-      'http://192.168.0.107:8000/api'; // Replace with your backend URL
+      'http://192.168.0.101:8000/api'; // Replace with your backend URL
   // 'http://127.0.0.1:8000/api'; // Replace with your backend URL
   late final String apiLogin,
       apiRegister,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
+import 'package:snap_check/models/start_trip_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
@@ -494,7 +495,7 @@ class _AddDayLogScreenState extends State<AddDayLogScreen> {
           selectedParty!.id.toString(); // assumes `selectedParty` is defined
     }
 
-    CreateDayLogResponseModel? postDayLogsResponseModel = await _basicService
+    StartTripResponseModel? postDayLogsResponseModel = await _basicService
         .postDayLog(tokenData!, imageFile, formData);
     if (postDayLogsResponseModel != null &&
         postDayLogsResponseModel.success == true) {

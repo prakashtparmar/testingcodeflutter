@@ -3,8 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:location/location.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:snap_check/services/basic_service.dart';
+import 'package:battery_plus/battery_plus.dart'; // Add this import at the top
+import 'package:location/location.dart' as location_package;
+
+enum GpsStatus {
+  disabled(0),
+  enabled(1),
+  searching(2),
+  unavailable(3);
+
+  final int value;
+  const GpsStatus(this.value);
+}
 
 class LocationTrackingService {
+  final Battery _battery = Battery();
+
   final Location _location = Location();
   final Connectivity _connectivity = Connectivity();
   Timer? _locationTimer;
@@ -179,21 +193,60 @@ class LocationTrackingService {
     }
   }
 
+  // Add this method to get GPS status
+  Future<GpsStatus> _getGpsStatus() async {
+    try {
+      final serviceEnabled = await _location.serviceEnabled();
+      if (!serviceEnabled) return GpsStatus.disabled;
+
+      final permission = await _location.hasPermission();
+      if (permission == location_package.PermissionStatus.denied ||
+          permission == location_package.PermissionStatus.deniedForever) {
+        return GpsStatus.unavailable;
+      }
+
+      // Check if we're currently getting location updates
+      if (_isTracking) {
+        return GpsStatus.searching;
+      }
+
+      return GpsStatus.enabled;
+    } catch (e) {
+      debugPrint('Error getting GPS status: $e');
+      return GpsStatus.unavailable;
+    }
+  }
+
   Future<void> _sendLocationToAPI(
     String token,
     String dayLogId,
     double latitude,
     double longitude,
   ) async {
+    // Get battery level
+    int? batteryLevel;
+    try {
+      batteryLevel = await _battery.batteryLevel;
+    } catch (e) {
+      debugPrint('Error getting battery level: $e');
+      batteryLevel = null;
+    }
+    // Get GPS status
+    final gpsStatus = await _getGpsStatus();
     final locationPayload = {
       "trip_id": dayLogId,
       "latitude": latitude,
       "longitude": longitude,
+      "gps_status": "${gpsStatus.value}", // Send numeric value
+
+      if (batteryLevel != null) "battery_percentage": "$batteryLevel",
     };
 
     if (!_isConnected) {
       _locationQueue.add(locationPayload);
-      debugPrint('Offline - location queued');
+      debugPrint(
+        'Offline - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
       return;
     }
 
@@ -202,40 +255,56 @@ class LocationTrackingService {
           .postDayLogLocations(token, locationPayload)
           .timeout(_apiTimeout);
 
-      if (response != null) {
-        debugPrint('Location sent successfully');
-      } else {
-        _locationQueue.add(locationPayload);
-        debugPrint('API returned null - location queued');
+      if (response == null ||
+          response.success == false ||
+          response.data == null) {
+        debugPrint('API response indicates failure - stopping tracking');
+        await stopTracking();
+        return;
       }
+
+      debugPrint(
+        'Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
     } on TimeoutException {
       _locationQueue.add(locationPayload);
-      debugPrint('API timeout - location queued');
+      debugPrint(
+        'API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
     } catch (e) {
       _locationQueue.add(locationPayload);
-      debugPrint('API error - location queued: $e');
+      debugPrint(
+        'API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
     }
   }
 
   Future<void> _processLocationQueue() async {
-    if (!_isConnected || _locationQueue.isEmpty || _currentToken == null)
+    if (!_isConnected || _locationQueue.isEmpty || _currentToken == null) {
       return;
+    }
 
     int attempt = 0;
     while (attempt < _maxRetryAttempts && _locationQueue.isNotEmpty) {
       try {
         final payload = _locationQueue.first;
+        final currentGpsStatus = await _getGpsStatus();
+        payload['gps_status'] = "$currentGpsStatus.value";
+
         final response = await BasicService()
             .postDayLogLocations(_currentToken!, payload)
             .timeout(_apiTimeout);
 
-        if (response != null) {
-          _locationQueue.removeAt(0);
-          debugPrint('Queued location sent successfully');
-        } else {
-          attempt++;
-          debugPrint('Retry attempt $attempt for queued location');
+        if (response == null ||
+            response.success == false ||
+            response.data == null) {
+          debugPrint('API response indicates failure - stopping tracking');
+          await stopTracking();
+          return;
         }
+
+        _locationQueue.removeAt(0);
+        debugPrint('Queued location sent successfully');
       } catch (e) {
         attempt++;
         debugPrint('Retry attempt $attempt failed: $e');
