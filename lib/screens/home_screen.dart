@@ -49,40 +49,69 @@ class _HomeScreenState extends State<HomeScreen> {
         // Optionally show user guidance
       }
     }
+    final hasLocationPermission = await permissionHandler.hasLocationPermission;
+    if (!hasLocationPermission) {
+      bool granted = await permissionHandler.requestLocationPermission();
+      if (granted) {
+        debugPrint("User granted location permission");
+        // Proceed with location-related tasks
+      } else {
+        debugPrint("User denied location permission");
+        // Show a message or open app settings
+      }
+      // Optionally show user guidance
+    }
+    bool isLocationEnabled = await permissionHandler.areLocationServicesEnabled;
+    if (isLocationEnabled) {
+      debugPrint("Location services (GPS) are on");
+    } else {
+      debugPrint("Please enable GPS/Location services");
+      bool preciseGranted =
+          await permissionHandler.requestPreciseLocationPermission();
+      if (preciseGranted) {
+        debugPrint("Precise location access granted");
+      } else {
+        debugPrint("Only approximate location available");
+      }
+    }
     await _fetchActiveDayLog();
   }
 
   Future<void> _fetchActiveDayLog() async {
+    final tokenData = await SharedPrefHelper.getToken();
     try {
-      final tokenData = await SharedPrefHelper.getToken();
       setState(() => _isLoading = true);
 
       final response = await _basicService.getActiveDayLog(tokenData!);
+      debugPrint("response ${response?.message}");
       if (response != null && response.data != null) {
         SharedPrefHelper.saveActiveDayLogId(response.data!.id.toString());
         setState(() {
           _activeDayLogDataModel = response.data;
         });
-        final locationService = LocationTrackingService();
+        final locationService = LocationService();
 
         // Start tracking
         bool started = await locationService.startTracking(
           token: tokenData,
-          dayLogId: response.data!.id.toString(),
+          dayLogId: "${response.data?.id}",
         );
         debugPrint("started $started");
       } else {
         _activeDayLogDataModel = null;
-        SharedPrefHelper.clearActiveDayLog();
-        final locationService = LocationTrackingService();
+
+        final locationService = LocationService();
         // Stop tracking
-        await locationService.stopTracking();
-        // Dispose when done
-        await locationService.dispose();
-        setState(() {
-          _isLoading = false;
-        });
+        await locationService.startTracking(
+          token: tokenData,
+          dayLogId: await SharedPrefHelper.getActiveDayLogId() ?? "",
+        );
+
+        SharedPrefHelper.clearActiveDayLog();
       }
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       if (e is UnauthorizedException) {
         _activeDayLogDataModel = null;
@@ -93,15 +122,17 @@ class _HomeScreenState extends State<HomeScreen> {
         _redirectToLogin();
       } else if (e is NotFoundException) {
         _activeDayLogDataModel = null;
-        SharedPrefHelper.clearActiveDayLog();
-        final locationService = LocationTrackingService();
+        final locationService = LocationService();
         // Stop tracking
-        await locationService.stopTracking();
-        // Dispose when done
-        await locationService.dispose();
+        await locationService.startTracking(
+          token: tokenData ?? "",
+          dayLogId: await SharedPrefHelper.getActiveDayLogId() ?? "",
+        );
+
         setState(() {
           _isLoading = false;
         });
+        SharedPrefHelper.clearActiveDayLog();
       } else {
         if (mounted) {
           setState(() {

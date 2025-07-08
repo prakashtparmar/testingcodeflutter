@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:snap_check/screens/add_day_log_screen.dart';
 import 'package:snap_check/screens/change_password.dart';
 import 'package:snap_check/screens/checkout_day_log_screen.dart';
 import 'package:snap_check/screens/day_log_list_screen.dart';
@@ -17,6 +16,7 @@ import 'package:snap_check/screens/user_detail_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -42,7 +42,6 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomeScreen(),
         '/settings': (context) => SettingsScreen(),
         '/dayLogs': (context) => DayLogsListScreen(),
-        '/addDayLog': (context) => AddDayLogScreen(),
         '/userDetail': (context) => UserDetailScreen(),
         '/leaves': (context) => LeavesListScreen(),
         '/leaveRequest': (context) => LeaveRequestScreen(),

@@ -188,7 +188,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
 
       if (response?.success == true) {
         SharedPrefHelper.clearActiveDayLog();
-        final locationService = LocationTrackingService();
+        final locationService = LocationService();
         // Stop tracking
         await locationService.stopTracking();
         // Dispose when done

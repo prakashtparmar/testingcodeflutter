@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:snap_check/models/create_day_log_response_model.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/start_trip_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
@@ -313,12 +312,12 @@ class _StartTripScreenState extends State<StartTripScreen> {
           return;
         }
         // Initialize
-        final locationService = LocationTrackingService();
+        final locationService = LocationService();
 
         // Start tracking
         bool started = await locationService.startTracking(
           token: tokenData,
-          dayLogId: postDayLogsResponseModel.data!.id.toString(),
+          dayLogId: "${postDayLogsResponseModel.data!.id}",
         );
         debugPrint("started $started");
         Navigator.pop(context, true); // Sends 'true' back to the caller

@@ -8,22 +8,26 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.annotation.RequiresApi
+import android.content.Context
 
 class MainActivity: FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        GeneratedPluginRegistrant.registerWith(flutterEngine)
         super.configureFlutterEngine(flutterEngine)
+        createNotificationChannel()
+    }
+    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                "location_channel", // Must match notificationChannelId in Flutter
-                "Location Tracking", // Must match notificationChannelName
+                "location_tracker",
+                "Location Tracker",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "This channel is used for location tracking" // Match description
+                description = "Tracks your location in background"
             }
-            
-            val notificationManager = getSystemService(NotificationManager::class.java)
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
+
 }
