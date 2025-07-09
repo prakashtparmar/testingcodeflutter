@@ -2,13 +2,12 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+import 'package:snap_check/services/share_pref.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,17 +21,15 @@ enum GpsStatus {
   const GpsStatus(this.value);
 }
 
+@pragma('vm:entry-point')
 class LocationService {
-  static const String _tokenKey = 'location_service_token';
-  static const String _dayLogIdKey = 'location_service_day_log_id';
-
   final Battery _battery = Battery();
   final Location _location = Location();
   final Connectivity _connectivity = Connectivity();
   Timer? _locationTimer;
   StreamSubscription? _connectivitySubscription;
   StreamSubscription<LocationData>? _locationUpdates;
-  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
+  var _serviceStatusSubscription;
 
   // Tracking state
   bool _isTracking = false;
@@ -56,6 +53,7 @@ class LocationService {
 
   bool get isTracking => _isTracking;
 
+  @pragma('vm:entry-point')
   LocationService() {
     _initializeService();
     _setupBackgroundService();
@@ -92,18 +90,18 @@ class LocationService {
     }
 
     // Set up periodic checks since there's no direct stream
-    _serviceStatusSubscription =
-        Stream.periodic(const Duration(seconds: 10)).listen((_) async {
-              final currentStatus = await _location.serviceEnabled();
-              if (_serviceEnabled != currentStatus) {
-                _serviceEnabled = currentStatus;
-                if (!_serviceEnabled && _isTracking) {
-                  debugPrint('Location service disabled while tracking');
-                  await stopTracking();
-                }
-              }
-            })
-            as StreamSubscription<ServiceStatus>?;
+    _serviceStatusSubscription = Stream.periodic(
+      const Duration(seconds: 10),
+    ).listen((_) async {
+      final currentStatus = await _location.serviceEnabled();
+      if (_serviceEnabled != currentStatus) {
+        _serviceEnabled = currentStatus;
+        if (!_serviceEnabled && _isTracking) {
+          debugPrint('Location service disabled while tracking');
+          await stopTracking();
+        }
+      }
+    });
   }
 
   Future<void> _setupBackgroundService() async {
@@ -134,9 +132,8 @@ class LocationService {
   @pragma('vm:entry-point')
   static void _backgroundTaskCallback() {
     Workmanager().executeTask((task, inputData) async {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_tokenKey);
-      final dayLogId = prefs.getString(_dayLogIdKey);
+      final token = await SharedPrefHelper.getToken();
+      final dayLogId = await SharedPrefHelper.getActiveDayLogId();
 
       if (token == null || dayLogId == null) {
         return Future.value(false);
@@ -162,11 +159,18 @@ class LocationService {
             if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
           };
 
-          // You would need to make BasicService available here
-          // For simplicity, we'll assume it's available
-          await BasicService()
+          final response = await BasicService()
               .postDayLogLocations(token, locationPayload)
               .timeout(const Duration(seconds: 10));
+
+          // Stop tracking if API response indicates failure
+          if (response == null ||
+              response.success == false ||
+              response.errors != null ||
+              response.data == null) {
+            debugPrint('Background API response indicates failure');
+            return Future.value(false);
+          }
         }
       } catch (e) {
         debugPrint('Background task error: $e');
@@ -179,9 +183,13 @@ class LocationService {
 
   @pragma('vm:entry-point')
   static Future<void> _onBackgroundServiceStart(ServiceInstance service) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_tokenKey);
-    final dayLogId = prefs.getString(_dayLogIdKey);
+    // Add this at the beginning
+    service.on('stopService').listen((event) async {
+      service.stopSelf();
+    });
+
+    final token = await SharedPrefHelper.getToken();
+    final dayLogId = await SharedPrefHelper.getActiveDayLogId();
 
     if (token == null || dayLogId == null) {
       service.stopSelf();
@@ -249,9 +257,22 @@ class LocationService {
         if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
       };
 
-      await BasicService()
+      final response = await BasicService()
           .postDayLogLocations(token, locationPayload)
           .timeout(const Duration(seconds: 10));
+
+      // Stop tracking if API response indicates failure
+      if (response == null ||
+          response.success == false ||
+          response.errors != null ||
+          response.data == null) {
+        debugPrint(
+          'Background service API response indicates failure - stopping',
+        );
+
+        service.stopSelf();
+        return;
+      }
     } catch (e) {
       debugPrint('Background location error: $e');
     }
@@ -279,6 +300,10 @@ class LocationService {
       debugPrint('AppLifecycleState: $msg');
 
       switch (msg) {
+        case 'AppLifecycleState.inactive':
+          _isInBackground = true;
+          _handleAppBackgrounded();
+          break;
         case 'AppLifecycleState.paused':
           _isInBackground = true;
           _handleAppBackgrounded();
@@ -328,6 +353,7 @@ class LocationService {
     _startPeriodicLocationUpdates();
   }
 
+  @pragma('vm:entry-point')
   Future<bool> startTracking({
     required String token,
     required String dayLogId,
@@ -341,10 +367,6 @@ class LocationService {
     _currentDayLogId = dayLogId;
 
     // Store credentials for background use
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
-    await prefs.setString(_dayLogIdKey, dayLogId);
-
     if (!await _checkLocationServices()) return false;
     if (!await _checkLocationPermissions()) return false;
 
@@ -362,10 +384,10 @@ class LocationService {
     ) {
       if (locationData.latitude != null && locationData.longitude != null) {
         _sendLocationToAPI(
-          _currentToken!,
-          _currentDayLogId!,
-          locationData.latitude!,
-          locationData.longitude!,
+          _currentToken ?? "",
+          _currentDayLogId ?? "",
+          locationData.latitude ?? 0,
+          locationData.longitude ?? 0,
         );
       }
     }, onError: (e) => debugPrint('Location update error: $e'));
@@ -443,10 +465,13 @@ class LocationService {
     }
   }
 
+  @pragma('vm:entry-point')
   Future<void> stopTracking() async {
+    // Cancel all timers and subscriptions
     _locationTimer?.cancel();
     _locationTimer = null;
-    _locationUpdates?.cancel();
+
+    await _locationUpdates?.cancel();
     _locationUpdates = null;
 
     // Process any remaining locations in queue
@@ -459,15 +484,24 @@ class LocationService {
     _currentDayLogId = null;
 
     // Clear stored credentials
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_dayLogIdKey);
-
-    // Stop background services
+    // Stop background services more thoroughly
     if (Platform.isAndroid) {
-      final service = FlutterBackgroundService();
-      service.invoke('stopService');
-      Workmanager().cancelByTag('1');
+      try {
+        final service = FlutterBackgroundService();
+        // Ensure service is actually running before trying to stop it
+        final isRunning = await service.isRunning();
+        if (isRunning) {
+          service.invoke('stopService');
+          // Add delay to ensure service stops
+          await Future.delayed(const Duration(seconds: 1));
+        }
+
+        // Cancel all workmanager tasks
+        await Workmanager().cancelAll();
+        await Workmanager().cancelByUniqueName(_backgroundTaskName);
+      } catch (e) {
+        debugPrint('Error stopping background services: $e');
+      }
     }
   }
 
@@ -568,6 +602,7 @@ class LocationService {
 
       if (response == null ||
           response.success == false ||
+          response.errors != null ||
           response.data == null) {
         debugPrint('API response indicates failure - stopping tracking');
         await stopTracking();
@@ -582,11 +617,13 @@ class LocationService {
       debugPrint(
         'API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
       );
+      await stopTracking();
     } catch (e) {
       _locationQueue.add(locationPayload);
       debugPrint(
         'API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)',
       );
+      await stopTracking();
     }
   }
 
@@ -620,6 +657,21 @@ class LocationService {
         attempt++;
         debugPrint('Retry attempt $attempt failed: $e');
         await Future.delayed(const Duration(seconds: 1));
+      }
+    }
+  }
+
+  Future<void> forceStopAllServices() async {
+    await stopTracking();
+
+    if (Platform.isAndroid) {
+      try {
+        final service = FlutterBackgroundService();
+        service.invoke('stopService');
+        await Workmanager().cancelAll();
+        await Future.delayed(const Duration(seconds: 1));
+      } catch (e) {
+        debugPrint('Force stop error: $e');
       }
     }
   }

@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final BasicService _basicService = BasicService();
   ActiveDayLogDataModel? _activeDayLogDataModel = null;
   final permissionHandler = PermissionUtil();
-
+  final locationService = LocationService();
   bool _isLoading = true;
 
   @override
@@ -89,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _activeDayLogDataModel = response.data;
         });
-        final locationService = LocationService();
 
         // Start tracking
         bool started = await locationService.startTracking(
@@ -100,13 +99,11 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         _activeDayLogDataModel = null;
 
-        final locationService = LocationService();
         // Stop tracking
-        await locationService.startTracking(
-          token: tokenData,
-          dayLogId: await SharedPrefHelper.getActiveDayLogId() ?? "",
-        );
-
+        await locationService.stopTracking();
+        await locationService.forceStopAllServices();
+        // Dispose when done
+        await locationService.dispose();
         SharedPrefHelper.clearActiveDayLog();
       }
       setState(() {
@@ -122,12 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _redirectToLogin();
       } else if (e is NotFoundException) {
         _activeDayLogDataModel = null;
-        final locationService = LocationService();
         // Stop tracking
-        await locationService.startTracking(
-          token: tokenData ?? "",
-          dayLogId: await SharedPrefHelper.getActiveDayLogId() ?? "",
-        );
+        await locationService.stopTracking();
+        await locationService.forceStopAllServices();
+        // Dispose when done
+        await locationService.dispose();
 
         setState(() {
           _isLoading = false;

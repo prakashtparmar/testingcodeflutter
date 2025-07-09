@@ -4,8 +4,14 @@ class DayLogStoreLocationResponseModel {
   bool? success;
   DayLogStoreLocationsDataModel? data;
   String? message;
+  Errors? errors;
 
-  DayLogStoreLocationResponseModel({this.success, this.data, this.message});
+  DayLogStoreLocationResponseModel({
+    this.success,
+    this.data,
+    this.message,
+    this.errors,
+  });
 
   DayLogStoreLocationResponseModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
@@ -14,6 +20,7 @@ class DayLogStoreLocationResponseModel {
             ? DayLogStoreLocationsDataModel.fromJson(json['data'])
             : null;
     message = json['message'];
+    errors = json['errors'] != null ? Errors.fromJson(json['errors']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -23,6 +30,25 @@ class DayLogStoreLocationResponseModel {
       data['data'] = this.data!.toJson();
     }
     data['message'] = message;
+    if (errors != null) {
+      data['errors'] = errors!.toJson();
+    }
+    return data;
+  }
+}
+
+class Errors {
+  List<String>? tripId;
+
+  Errors({this.tripId});
+
+  Errors.fromJson(Map<String, dynamic> json) {
+    tripId = json['trip_id'].cast<String>();
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['trip_id'] = tripId;
     return data;
   }
 }

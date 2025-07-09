@@ -191,6 +191,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         final locationService = LocationService();
         // Stop tracking
         await locationService.stopTracking();
+        await locationService.forceStopAllServices();
         // Dispose when done
         await locationService.dispose();
         SnackBar(
