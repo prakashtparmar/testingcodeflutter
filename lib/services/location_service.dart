@@ -2,14 +2,13 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum GpsStatus {
   disabled(0),
@@ -23,13 +22,13 @@ enum GpsStatus {
 
 @pragma('vm:entry-point')
 class LocationService {
+  static const MethodChannel _platform = MethodChannel('location_tracker');
   final Battery _battery = Battery();
-  final Location _location = Location();
   final Connectivity _connectivity = Connectivity();
   Timer? _locationTimer;
   StreamSubscription? _connectivitySubscription;
-  StreamSubscription<LocationData>? _locationUpdates;
-  var _serviceStatusSubscription;
+  StreamSubscription<Position>? _positionStream;
+  StreamSubscription<ServiceStatus>? _serviceStatusStream;
 
   // Tracking state
   bool _isTracking = false;
@@ -38,7 +37,7 @@ class LocationService {
   final List<Map<String, Object>> _locationQueue = [];
 
   // Status flags
-  bool _hasPermission = false;
+  LocationPermission _permissionStatus = LocationPermission.denied;
   bool _serviceEnabled = false;
   bool _isConnected = true;
   bool _isInBackground = false;
@@ -83,36 +82,31 @@ class LocationService {
 
   Future<void> _checkAndMonitorServiceStatus() async {
     // Initial check
-    _serviceEnabled = await _location.serviceEnabled();
+    _serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!_serviceEnabled && _isTracking) {
       debugPrint('Location service disabled while tracking');
       await stopTracking();
     }
 
-    // Set up periodic checks since there's no direct stream
-    _serviceStatusSubscription = Stream.periodic(
-      const Duration(seconds: 10),
-    ).listen((_) async {
-      final currentStatus = await _location.serviceEnabled();
-      if (_serviceEnabled != currentStatus) {
-        _serviceEnabled = currentStatus;
-        if (!_serviceEnabled && _isTracking) {
-          debugPrint('Location service disabled while tracking');
-          await stopTracking();
-        }
+    // Set up service status stream
+    _serviceStatusStream = Geolocator.getServiceStatusStream().listen((status) {
+      _serviceEnabled = status == ServiceStatus.enabled;
+      if (!_serviceEnabled && _isTracking) {
+        debugPrint('Location service disabled while tracking');
+        stopTracking();
       }
     });
   }
 
   Future<void> _setupBackgroundService() async {
     if (Platform.isAndroid) {
-      // Initialize Workmanager for periodic background tasks
+      // Initialize Workmanager
       await Workmanager().initialize(
         _backgroundTaskCallback,
         isInDebugMode: kDebugMode,
       );
 
-      // Initialize Flutter Background Service for persistent background tasks
+      // Configure background service
       final service = FlutterBackgroundService();
       await service.configure(
         androidConfiguration: AndroidConfiguration(
@@ -121,8 +115,12 @@ class LocationService {
           isForegroundMode: true,
           notificationChannelId: 'location_tracker',
           initialNotificationTitle: 'Location Tracking',
-          initialNotificationContent: 'Tracking your location',
+          initialNotificationContent: 'Tracking your location in background',
           foregroundServiceNotificationId: 888,
+          foregroundServiceTypes: [
+            AndroidForegroundType.location,
+            AndroidForegroundType.connectedDevice,
+          ],
         ),
         iosConfiguration: IosConfiguration(),
       );
@@ -139,38 +137,34 @@ class LocationService {
         return Future.value(false);
       }
 
-      final location = Location();
       try {
-        final locationData = await location.getLocation().timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => throw TimeoutException('Location request timed out'),
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: const Duration(seconds: 30),
         );
 
-        if (locationData.latitude != null && locationData.longitude != null) {
-          final battery = Battery();
-          final batteryLevel = await battery.batteryLevel;
-          final gpsStatus = await _getGpsStatusLocation(location);
+        final battery = Battery();
+        final batteryLevel = await battery.batteryLevel;
+        final gpsStatus = await _getGpsStatusGeolocator();
 
-          final locationPayload = {
-            "trip_id": dayLogId,
-            "latitude": locationData.latitude,
-            "longitude": locationData.longitude,
-            "gps_status": "${gpsStatus.value}",
-            if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
-          };
+        final locationPayload = {
+          "trip_id": dayLogId,
+          "latitude": position.latitude,
+          "longitude": position.longitude,
+          "gps_status": "${gpsStatus.value}",
+          if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
+        };
 
-          final response = await BasicService()
-              .postDayLogLocations(token, locationPayload)
-              .timeout(const Duration(seconds: 10));
+        final response = await BasicService()
+            .postDayLogLocations(token, locationPayload)
+            .timeout(const Duration(seconds: 10));
 
-          // Stop tracking if API response indicates failure
-          if (response == null ||
-              response.success == false ||
-              response.errors != null ||
-              response.data == null) {
-            debugPrint('Background API response indicates failure');
-            return Future.value(false);
-          }
+        if (response == null ||
+            response.success == false ||
+            response.errors != null ||
+            response.data == null) {
+          debugPrint('Background API response indicates failure');
+          return Future.value(false);
         }
       } catch (e) {
         debugPrint('Background task error: $e');
@@ -183,10 +177,13 @@ class LocationService {
 
   @pragma('vm:entry-point')
   static Future<void> _onBackgroundServiceStart(ServiceInstance service) async {
-    // Add this at the beginning
-    service.on('stopService').listen((event) async {
-      service.stopSelf();
-    });
+    if (service is AndroidServiceInstance) {
+      service.setAsForegroundService();
+
+      service.on('stopService').listen((event) {
+        service.stopSelf();
+      });
+    }
 
     final token = await SharedPrefHelper.getToken();
     final dayLogId = await SharedPrefHelper.getActiveDayLogId();
@@ -196,32 +193,17 @@ class LocationService {
       return;
     }
 
-    if (service is AndroidServiceInstance) {
-      service.on('setAsForeground').listen((event) {
-        service.setAsForegroundService();
-      });
-
-      service.on('setAsBackground').listen((event) {
-        service.setAsBackgroundService();
-      });
-    }
-
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
-
-    // Get location immediately when service starts
+    // Immediate location update
     await _sendLocationInBackground(service, token, dayLogId);
 
-    // Then set up periodic updates
+    // Set up periodic updates
     Timer.periodic(const Duration(seconds: _backgroundInterval), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          service.setForegroundNotificationInfo(
-            title: "Location Tracker",
-            content: "Tracking your location in background",
-          );
-        }
+      if (service is AndroidServiceInstance &&
+          await service.isForegroundService()) {
+        service.setForegroundNotificationInfo(
+          title: "Location Tracker",
+          content: "Last update: ${DateTime.now()}",
+        );
       }
 
       await _sendLocationInBackground(service, token, dayLogId);
@@ -235,24 +217,19 @@ class LocationService {
     String dayLogId,
   ) async {
     try {
-      final location = Location();
-      final locationData = await location.getLocation().timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => throw TimeoutException('Location request timed out'),
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+        timeLimit: const Duration(seconds: 30),
       );
-
-      if (locationData.latitude == null || locationData.longitude == null) {
-        return;
-      }
 
       final battery = Battery();
       final batteryLevel = await battery.batteryLevel;
-      final gpsStatus = await _getGpsStatusLocation(location);
+      final gpsStatus = await _getGpsStatusGeolocator();
 
       final locationPayload = {
         "trip_id": dayLogId,
-        "latitude": locationData.latitude,
-        "longitude": locationData.longitude,
+        "latitude": position.latitude,
+        "longitude": position.longitude,
         "gps_status": "${gpsStatus.value}",
         if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
       };
@@ -261,15 +238,11 @@ class LocationService {
           .postDayLogLocations(token, locationPayload)
           .timeout(const Duration(seconds: 10));
 
-      // Stop tracking if API response indicates failure
       if (response == null ||
           response.success == false ||
           response.errors != null ||
           response.data == null) {
-        debugPrint(
-          'Background service API response indicates failure - stopping',
-        );
-
+        debugPrint('Background service API response indicates failure - stopping');
         service.stopSelf();
         return;
       }
@@ -278,14 +251,14 @@ class LocationService {
     }
   }
 
-  static Future<GpsStatus> _getGpsStatusLocation(Location location) async {
+  static Future<GpsStatus> _getGpsStatusGeolocator() async {
     try {
-      final serviceEnabled = await location.serviceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return GpsStatus.disabled;
 
-      final permission = await location.hasPermission();
-      if (permission == PermissionStatus.denied ||
-          permission == PermissionStatus.deniedForever) {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         return GpsStatus.unavailable;
       }
 
@@ -317,39 +290,74 @@ class LocationService {
     });
   }
 
-  void _handleAppBackgrounded() {
+  void _handleAppBackgrounded() async {
     if (!_isTracking) return;
 
     debugPrint('App moved to background - adjusting location tracking');
 
-    // Stop foreground updates and start background service
-    _locationUpdates?.pause();
-    _locationTimer?.cancel();
+    // Start native Android foreground service
+    try {
+      await _platform.invokeMethod('startBackgroundService');
+    } catch (e) {
+      debugPrint('Native background service start error: $e');
+    }
 
     if (Platform.isAndroid) {
-      final service = FlutterBackgroundService();
-      service.startService();
+      try {
+        // Start background service first
+        final service = FlutterBackgroundService();
+        await service.startService();
 
-      Workmanager().registerPeriodicTask(
-        '1',
-        _backgroundTaskName,
-        frequency: const Duration(minutes: 15),
-      );
+        // Then pause foreground updates
+        _positionStream?.pause();
+        _locationTimer?.cancel();
+
+        // Register periodic workmanager task
+        await Workmanager().registerPeriodicTask(
+          '1',
+          _backgroundTaskName,
+          frequency: const Duration(minutes: 15),
+          initialDelay: const Duration(seconds: 10),
+          constraints: Constraints(
+            networkType: NetworkType.connected,
+            requiresBatteryNotLow: false,
+            requiresCharging: false,
+            requiresDeviceIdle: false,
+            requiresStorageNotLow: false,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error starting background service: $e');
+      }
     }
   }
 
-  void _handleAppForegrounded() {
+  void _handleAppForegrounded() async {
     if (!_isTracking) return;
 
     debugPrint('App moved to foreground - adjusting location tracking');
 
-    if (Platform.isAndroid) {
-      final service = FlutterBackgroundService();
-      service.invoke('stopService');
-      Workmanager().cancelByTag('1');
+    // Stop native Android foreground service
+    try {
+      await _platform.invokeMethod('stopBackgroundService');
+    } catch (e) {
+      debugPrint('Native background service stop error: $e');
     }
 
-    _locationUpdates?.resume();
+    if (Platform.isAndroid) {
+      try {
+        final service = FlutterBackgroundService();
+        if (await service.isRunning()) {
+          service.invoke('stopService');
+        }
+        await Workmanager().cancelByTag('1');
+      } catch (e) {
+        debugPrint('Error stopping background service: $e');
+      }
+    }
+
+    // Resume foreground updates
+    _positionStream?.resume();
     _startPeriodicLocationUpdates();
   }
 
@@ -378,23 +386,24 @@ class LocationService {
     // Start periodic updates based on foreground/background state
     _startPeriodicLocationUpdates();
 
-    // Start listening to continuous location updates
-    _locationUpdates = _location.onLocationChanged.listen((
-      LocationData locationData,
-    ) {
-      if (locationData.latitude != null && locationData.longitude != null) {
-        _sendLocationToAPI(
-          _currentToken ?? "",
-          _currentDayLogId ?? "",
-          locationData.latitude ?? 0,
-          locationData.longitude ?? 0,
-        );
-      }
-    }, onError: (e) => debugPrint('Location update error: $e'));
+    // Start listening to continuous position updates
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 10, // meters
+      ),
+    ).listen((Position position) {
+      _sendLocationToAPI(
+        _currentToken ?? "",
+        _currentDayLogId ?? "",
+        position.latitude,
+        position.longitude,
+      );
+    }, onError: (e) => debugPrint('Position update error: $e'));
 
     // Adjust based on app state
     if (_isInBackground) {
-      _locationUpdates?.pause();
+      _positionStream?.pause();
     }
 
     return true;
@@ -412,53 +421,35 @@ class LocationService {
 
   Future<bool> _checkLocationServices() async {
     try {
-      _serviceEnabled = await _location.serviceEnabled();
+      _serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!_serviceEnabled) {
-        _serviceEnabled = await _location.requestService();
-        if (!_serviceEnabled) {
-          debugPrint('Location services disabled by user');
-          return false;
-        }
+        // Note: Geolocator doesn't have a direct method to request service enablement
+        // You might need to show a dialog directing users to settings
+        debugPrint('Location services disabled by user');
+        return false;
       }
       return true;
     } catch (e) {
       debugPrint('Location service check failed: $e');
-      if (e.toString().contains('MissingPluginException')) {
-        debugPrint(
-          'Location plugin not registered. Run flutter pub get and rebuild',
-        );
-      }
       return false;
     }
   }
 
   Future<bool> _checkLocationPermissions() async {
     try {
-      var permissionStatus = await _location.hasPermission();
-      if (permissionStatus == PermissionStatus.denied ||
-          permissionStatus == PermissionStatus.deniedForever) {
-        permissionStatus = await _location.requestPermission();
+      _permissionStatus = await Geolocator.checkPermission();
+      if (_permissionStatus == LocationPermission.denied ||
+          _permissionStatus == LocationPermission.deniedForever) {
+        _permissionStatus = await Geolocator.requestPermission();
       }
 
-      _hasPermission =
-          permissionStatus == PermissionStatus.granted ||
-          permissionStatus == PermissionStatus.grantedLimited;
-
-      if (!_hasPermission) {
+      if (_permissionStatus == LocationPermission.denied ||
+          _permissionStatus == LocationPermission.deniedForever) {
         debugPrint('Location permission denied');
         return false;
       }
 
-      // Request background permission on Android
-      if (Platform.isAndroid &&
-          await _location.hasPermission() == PermissionStatus.granted) {
-        final backgroundStatus = await _location.requestPermission();
-        if (backgroundStatus != PermissionStatus.granted) {
-          debugPrint('Background location permission not granted');
-        }
-      }
-
-      return _hasPermission;
+      return true;
     } catch (e) {
       debugPrint('Location permission check failed: $e');
       return false;
@@ -471,8 +462,8 @@ class LocationService {
     _locationTimer?.cancel();
     _locationTimer = null;
 
-    await _locationUpdates?.cancel();
-    _locationUpdates = null;
+    await _positionStream?.cancel();
+    _positionStream = null;
 
     // Process any remaining locations in queue
     if (_locationQueue.isNotEmpty) {
@@ -483,16 +474,13 @@ class LocationService {
     _currentToken = null;
     _currentDayLogId = null;
 
-    // Clear stored credentials
     // Stop background services more thoroughly
     if (Platform.isAndroid) {
       try {
         final service = FlutterBackgroundService();
-        // Ensure service is actually running before trying to stop it
         final isRunning = await service.isRunning();
         if (isRunning) {
           service.invoke('stopService');
-          // Add delay to ensure service stops
           await Future.delayed(const Duration(seconds: 1));
         }
 
@@ -506,36 +494,28 @@ class LocationService {
   }
 
   Future<void> _sendCurrentLocation() async {
-    if (!_isTracking || _currentToken == null || _currentDayLogId == null)
-      return;
+    if (!_isTracking || _currentToken == null || _currentDayLogId == null) return;
 
     try {
-      final LocationData locationData;
+      final Position position;
       try {
-        locationData = await _location.getLocation().timeout(
-          _locationTimeout,
-          onTimeout: () {
-            debugPrint('Location acquisition timeout');
-            throw TimeoutException('Location request timed out');
-          },
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: _locationTimeout,
         );
       } on TimeoutException {
+        debugPrint('Location acquisition timeout');
         return;
       } catch (e) {
         debugPrint('Error getting location: $e');
         return;
       }
 
-      if (locationData.latitude == null || locationData.longitude == null) {
-        debugPrint('Invalid location data received');
-        return;
-      }
-
       await _sendLocationToAPI(
         _currentToken!,
         _currentDayLogId!,
-        locationData.latitude!,
-        locationData.longitude!,
+        position.latitude,
+        position.longitude,
       );
     } catch (e) {
       debugPrint('Error in location sending process: $e');
@@ -544,12 +524,11 @@ class LocationService {
 
   Future<GpsStatus> _getGpsStatus() async {
     try {
-      final serviceEnabled = await _location.serviceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return GpsStatus.disabled;
 
-      final permission = await _location.hasPermission();
-      if (permission == PermissionStatus.denied ||
-          permission == PermissionStatus.deniedForever) {
+      if (_permissionStatus == LocationPermission.denied ||
+          _permissionStatus == LocationPermission.deniedForever) {
         return GpsStatus.unavailable;
       }
 
@@ -589,9 +568,7 @@ class LocationService {
 
     if (!_isConnected) {
       _locationQueue.add(locationPayload);
-      debugPrint(
-        'Offline - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
+      debugPrint('Offline - location queued (Battery: ${batteryLevel ?? 'N/A'}%)');
       return;
     }
 
@@ -609,20 +586,14 @@ class LocationService {
         return;
       }
 
-      debugPrint(
-        'Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
+      debugPrint('Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)');
     } on TimeoutException {
       _locationQueue.add(locationPayload);
-      debugPrint(
-        'API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
+      debugPrint('API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)');
       await stopTracking();
     } catch (e) {
       _locationQueue.add(locationPayload);
-      debugPrint(
-        'API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
+      debugPrint('API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)');
       await stopTracking();
     }
   }
@@ -679,8 +650,8 @@ class LocationService {
   Future<void> dispose() async {
     await stopTracking();
     await _connectivitySubscription?.cancel();
-    await _locationUpdates?.cancel();
-    await _serviceStatusSubscription?.cancel();
+    await _positionStream?.cancel();
+    await _serviceStatusStream?.cancel();
 
     _locationQueue.clear();
 

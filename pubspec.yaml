@@ -49,8 +49,6 @@ dependencies:
   flutter_background_service: ^5.1.0
   permission_handler: ^12.0.0+1
   device_info_plus: ^11.5.0
-  flutter_background_service_android: ^6.3.0
-  location: ^8.0.1
   focus_detector: ^2.0.1
   flutter_image_compress: ^2.4.0
   path_provider: ^2.1.5
