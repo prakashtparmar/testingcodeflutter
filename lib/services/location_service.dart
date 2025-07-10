@@ -22,6 +22,8 @@ enum GpsStatus {
 
 @pragma('vm:entry-point')
 class LocationService {
+  static final LocationService _instance = LocationService._internal();
+
   static const MethodChannel _platform = MethodChannel('location_tracker');
   final Battery _battery = Battery();
   final Connectivity _connectivity = Connectivity();
@@ -52,8 +54,12 @@ class LocationService {
 
   bool get isTracking => _isTracking;
 
+  factory LocationService() {
+    return _instance;
+  }
+
   @pragma('vm:entry-point')
-  LocationService() {
+  LocationService._internal() {
     _initializeService();
     _setupBackgroundService();
     _setupAppLifecycle();
@@ -242,7 +248,9 @@ class LocationService {
           response.success == false ||
           response.errors != null ||
           response.data == null) {
-        debugPrint('Background service API response indicates failure - stopping');
+        debugPrint(
+          'Background service API response indicates failure - stopping',
+        );
         service.stopSelf();
         return;
       }
@@ -458,6 +466,10 @@ class LocationService {
 
   @pragma('vm:entry-point')
   Future<void> stopTracking() async {
+    if (!_isTracking) return;
+
+    debugPrint('Stopping tracking service...');
+
     // Cancel all timers and subscriptions
     _locationTimer?.cancel();
     _locationTimer = null;
@@ -474,6 +486,13 @@ class LocationService {
     _currentToken = null;
     _currentDayLogId = null;
 
+    // Stop native background service
+    try {
+      await _platform.invokeMethod('stopBackgroundService');
+    } catch (e) {
+      debugPrint('Native background service stop error: $e');
+    }
+
     // Stop background services more thoroughly
     if (Platform.isAndroid) {
       try {
@@ -483,18 +502,23 @@ class LocationService {
           service.invoke('stopService');
           await Future.delayed(const Duration(seconds: 1));
         }
-
-        // Cancel all workmanager tasks
-        await Workmanager().cancelAll();
-        await Workmanager().cancelByUniqueName(_backgroundTaskName);
       } catch (e) {
         debugPrint('Error stopping background services: $e');
       }
     }
+    // Cancel all workmanager tasks
+    try {
+      await Workmanager().cancelAll();
+      await Workmanager().cancelByUniqueName(_backgroundTaskName);
+      debugPrint('All Workmanager tasks cancelled');
+    } catch (e) {
+      debugPrint('Error cancelling Workmanager tasks: $e');
+    }
   }
 
   Future<void> _sendCurrentLocation() async {
-    if (!_isTracking || _currentToken == null || _currentDayLogId == null) return;
+    if (!_isTracking || _currentToken == null || _currentDayLogId == null)
+      return;
 
     try {
       final Position position;
@@ -568,7 +592,9 @@ class LocationService {
 
     if (!_isConnected) {
       _locationQueue.add(locationPayload);
-      debugPrint('Offline - location queued (Battery: ${batteryLevel ?? 'N/A'}%)');
+      debugPrint(
+        'Offline - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
       return;
     }
 
@@ -586,14 +612,20 @@ class LocationService {
         return;
       }
 
-      debugPrint('Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)');
+      debugPrint(
+        'Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
     } on TimeoutException {
       _locationQueue.add(locationPayload);
-      debugPrint('API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)');
+      debugPrint(
+        'API timeout - location queued (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
       await stopTracking();
     } catch (e) {
       _locationQueue.add(locationPayload);
-      debugPrint('API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)');
+      debugPrint(
+        'API error - location queued: $e (Battery: ${batteryLevel ?? 'N/A'}%)',
+      );
       await stopTracking();
     }
   }
@@ -633,14 +665,25 @@ class LocationService {
   }
 
   Future<void> forceStopAllServices() async {
+    debugPrint('Force stopping all services...');
     await stopTracking();
 
     if (Platform.isAndroid) {
       try {
+        // Stop native service again
+        await _platform.invokeMethod('stopBackgroundService');
+
+        // Stop Flutter background service
         final service = FlutterBackgroundService();
-        service.invoke('stopService');
+        if (await service.isRunning()) {
+          service.invoke('stopService');
+          await Future.delayed(const Duration(seconds: 1));
+        }
+
+        // Cancel all workmanager tasks again
         await Workmanager().cancelAll();
-        await Future.delayed(const Duration(seconds: 1));
+        await Workmanager().cancelByUniqueName(_backgroundTaskName);
+        debugPrint('Force stopped all services');
       } catch (e) {
         debugPrint('Force stop error: $e');
       }
@@ -660,5 +703,38 @@ class LocationService {
       service.invoke('stopService');
       Workmanager().cancelByTag('1');
     }
+  }
+
+  Future<bool> isServiceRunning() async {
+    bool isTrackingActive = _isTracking;
+    bool isBackgroundServiceRunning = false;
+    bool hasWorkmanagerTasks = false;
+
+    debugPrint('Service status - Tracking active: $isTrackingActive');
+
+    if (Platform.isAndroid) {
+      try {
+        final service = FlutterBackgroundService();
+        isBackgroundServiceRunning = await service.isRunning();
+        debugPrint('Background service running: $isBackgroundServiceRunning');
+
+        // Note: Workmanager doesn't provide a direct way to check running tasks
+        // This is a limitation we need to work around
+        hasWorkmanagerTasks = await _checkWorkmanagerTasks();
+        debugPrint('Workmanager tasks pending: $hasWorkmanagerTasks');
+      } catch (e) {
+        debugPrint('Error checking background service status: $e');
+      }
+    }
+
+    return isTrackingActive ||
+        isBackgroundServiceRunning ||
+        hasWorkmanagerTasks;
+  }
+
+  Future<bool> _checkWorkmanagerTasks() async {
+    // Workaround for Workmanager task checking
+    // You might need to implement your own tracking mechanism
+    return false; // Default to false since we can't reliably check
   }
 }

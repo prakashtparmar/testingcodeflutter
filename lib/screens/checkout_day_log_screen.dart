@@ -189,11 +189,19 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
       if (response?.success == true) {
         SharedPrefHelper.clearActiveDayLog();
         final locationService = LocationService();
+
+        bool isRunning = await locationService.isServiceRunning();
+        debugPrint("Is service running before stop: $isRunning");
+
         // Stop tracking
         await locationService.stopTracking();
         await locationService.forceStopAllServices();
         // Dispose when done
         await locationService.dispose();
+
+        // Verify service is stopped
+        isRunning = await locationService.isServiceRunning();
+        debugPrint("Is service running after stop: $isRunning");
         SnackBar(
           content: Text("Checkout submitted successfully!"),
           duration: const Duration(seconds: 5),
@@ -340,9 +348,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                     onChanged: (val) => notes = val,
                     validator:
                         (val) =>
-                            val == null || val.isEmpty
-                                ? 'Enter Notes'
-                                : null,
+                            val == null || val.isEmpty ? 'Enter Notes' : null,
                   ),
 
                   const SizedBox(height: 12),

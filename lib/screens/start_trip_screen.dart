@@ -315,11 +315,16 @@ class _StartTripScreenState extends State<StartTripScreen> {
         final locationService = LocationService();
 
         // Start tracking
-        bool started = await locationService.startTracking(
-          token: tokenData,
-          dayLogId: "${postDayLogsResponseModel.data!.id}",
-        );
-        debugPrint("started $started");
+        if (locationService.isTracking) {
+          debugPrint("locationService.isTracking ${locationService.isTracking}");
+        } else {
+          bool started = await locationService.startTracking(
+            token: tokenData,
+            dayLogId: "${postDayLogsResponseModel.data!.id}",
+          );
+          debugPrint("started $started");
+        }
+
         Navigator.pop(context, true); // Sends 'true' back to the caller
       } else if (postDayLogsResponseModel != null &&
           postDayLogsResponseModel.success == false) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
+import 'package:snap_check/models/active_day_log_response_model.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
@@ -78,70 +79,109 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchActiveDayLog() async {
-    final tokenData = await SharedPrefHelper.getToken();
+    if (!mounted) return; // Early return if widget is not mounted
+
+    setState(() => _isLoading = true);
+
     try {
-      setState(() => _isLoading = true);
-
-      final response = await _basicService.getActiveDayLog(tokenData!);
-      debugPrint("response ${response?.message}");
-      if (response != null && response.data != null) {
-        SharedPrefHelper.saveActiveDayLogId(response.data!.id.toString());
-        setState(() {
-          _activeDayLogDataModel = response.data;
-        });
-
-        // Start tracking
-        bool started = await locationService.startTracking(
-          token: tokenData,
-          dayLogId: "${response.data?.id}",
-        );
-        debugPrint("started $started");
-      } else {
-        _activeDayLogDataModel = null;
-
-        // Stop tracking
-        await locationService.stopTracking();
-        await locationService.forceStopAllServices();
-        // Dispose when done
-        await locationService.dispose();
-        SharedPrefHelper.clearActiveDayLog();
-      }
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (e is UnauthorizedException) {
-        _activeDayLogDataModel = null;
-        setState(() {
-          _isLoading = false;
-        });
-        SharedPrefHelper.clearUser();
+      final tokenData = await SharedPrefHelper.getToken();
+      if (tokenData == null) {
         _redirectToLogin();
-      } else if (e is NotFoundException) {
-        _activeDayLogDataModel = null;
-        // Stop tracking
-        await locationService.stopTracking();
-        await locationService.forceStopAllServices();
-        // Dispose when done
-        await locationService.dispose();
-
-        setState(() {
-          _isLoading = false;
-        });
-        SharedPrefHelper.clearActiveDayLog();
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        return;
       }
+
+      final response = await _basicService.getActiveDayLog(tokenData);
+      debugPrint("Active day log response: ${response?.message}");
+
+      if (response != null && response.data != null) {
+        // Case: Active day log exists
+        await _handleActiveDayLogFound(response, tokenData);
+      } else {
+        // Case: No active day log
+        await _handleNoActiveDayLog();
+      }
+    } catch (e) {
+      await _handleFetchError(e);
     } finally {
       if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleActiveDayLogFound(
+    ActiveDayLogResponseModel response,
+    String tokenData,
+  ) async {
+    final dayLogId = response.data!.id.toString();
+    await SharedPrefHelper.saveActiveDayLogId(dayLogId);
+
+    if (mounted) {
+      setState(() {
+        _activeDayLogDataModel = response.data;
+      });
+    }
+
+    // Start tracking if not already tracking
+    if (locationService.isTracking) {
+      debugPrint("Tracking already active");
+    } else {
+      debugPrint("Starting location tracking...");
+      final started = await locationService.startTracking(
+        token: tokenData,
+        dayLogId: dayLogId,
+      );
+      debugPrint("Tracking started: $started");
+
+      if (!started) {
+        // Handle tracking start failure
+        debugPrint("Failed to start tracking");
+        // You might want to show an error to the user here
+      }
+    }
+  }
+
+  Future<void> _handleNoActiveDayLog() async {
+    if (mounted) {
+      setState(() {
+        _activeDayLogDataModel = null;
+      });
+    }
+
+    // Stop any existing tracking
+    await _stopTrackingServices();
+    await SharedPrefHelper.clearActiveDayLog();
+  }
+
+  Future<void> _handleFetchError(dynamic e) async {
+    debugPrint("Error fetching active day log: $e");
+
+    if (e is UnauthorizedException) {
+      await _stopTrackingServices();
+      SharedPrefHelper.clearUser();
+      _redirectToLogin();
+    } else if (e is NotFoundException) {
+      await _stopTrackingServices();
+      await SharedPrefHelper.clearActiveDayLog();
+
+      if (mounted) {
         setState(() {
-          _isLoading = false;
+          _activeDayLogDataModel = null;
         });
       }
+    }
+    // Other errors are silently caught (you might want to show a snackbar)
+  }
+
+  Future<void> _stopTrackingServices() async {
+    try {
+      debugPrint("Stopping tracking services...");
+      await locationService.stopTracking();
+      await locationService.forceStopAllServices();
+      await locationService.dispose();
+      debugPrint("Tracking services stopped successfully");
+    } catch (e) {
+      debugPrint("Error stopping tracking services: $e");
     }
   }
 
