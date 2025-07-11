@@ -23,12 +23,13 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2)); // splash duration
 
     final user = await SharedPrefHelper.loadUser();
-    debugPrint("user ${user?.email}");
+    final token = await SharedPrefHelper.getToken();
+    debugPrint("user token : $token");
     if (!mounted) return;
     if (user != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen(title: "")),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
       Navigator.pushReplacement(
@@ -41,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: AppTheme.primaryColorLight,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

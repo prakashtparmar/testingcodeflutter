@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:snap_check/screens/add_day_log_screen.dart';
+import 'package:snap_check/screens/change_password.dart';
+import 'package:snap_check/screens/checkout_day_log_screen.dart';
 import 'package:snap_check/screens/day_log_list_screen.dart';
+import 'package:snap_check/screens/edit_profile_screen.dart';
 import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
+import 'package:snap_check/screens/leave_request_screen.dart';
+import 'package:snap_check/screens/leaves_list_screen.dart';
 import 'package:snap_check/screens/login_screen.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/screens/signup_screen.dart';
 import 'package:snap_check/screens/splash_screen.dart';
+import 'package:snap_check/screens/start_trip_screen.dart';
 import 'package:snap_check/screens/user_detail_screen.dart';
 import 'package:snap_check/theme/theme_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -33,11 +39,16 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignupScreen(),
         '/forgot': (context) => ForgotPasswordScreen(),
-        '/home': (context) => HomeScreen(title: "Welcome Guest"),
+        '/home': (context) => HomeScreen(),
         '/settings': (context) => SettingsScreen(),
         '/dayLogs': (context) => DayLogsListScreen(),
-        '/addDayLog': (context) => AddDayLogScreen(),
         '/userDetail': (context) => UserDetailScreen(),
+        '/leaves': (context) => LeavesListScreen(),
+        '/leaveRequest': (context) => LeaveRequestScreen(),
+        '/editProfile': (context) => EditProfileScreen(),
+        '/changePassword': (context) => ChangePasswordScreen(),
+        '/checkoutDayLog': (context) => CheckoutDayLogScreen(),
+        '/starTrip': (context) => StartTripScreen(),
       },
     );
   }

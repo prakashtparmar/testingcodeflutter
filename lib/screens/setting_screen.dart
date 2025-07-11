@@ -38,15 +38,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     //   onTapMessage: 'Language tapped',
     // ),
     // _SettingItem(
-    //   icon: Icons.palette_outlined,
-    //   title: 'Appearance',
-    //   onTapMessage: 'Appearance tapped',
+    //   icon: Icons.security,
+    //   title: 'Change Password',
+    //   onTapMessage: 'Change Password tapped',
+    //   route: "/changePassword",
     // ),
     _SettingItem(
       icon: Icons.logout,
       title: 'Logout',
       onTapMessage: 'Logout tapped',
       isLogout: true,
+      route: "/",
     ),
   ];
 
@@ -56,15 +58,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadUser();
   }
 
+  void _navigationRoutes(BuildContext context, String routeName) {
+    Navigator.pushNamed(context, routeName);
+  }
+
   Future<void> _loadUser() async {
     final userData = await SharedPrefHelper.loadUser();
     final tokenData = await SharedPrefHelper.getToken();
-    debugPrint(tokenData);
+
     setState(() {
       _user = userData;
       _token = tokenData ?? "";
       _email = userData?.email ?? "";
-      _name = "${userData?.firstName ?? ''} ${userData?.lastName ?? ''}".trim();
+      _name = userData?.name!.trim();
     });
   }
 
@@ -82,24 +88,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   if (_user != null) ...[
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const CircleAvatar(
                           radius: 28,
                           child: Icon(Icons.person),
                         ),
                         const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _name ?? "",
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(
-                              _email ?? "",
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _name ?? "",
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.visibility),
+                                    tooltip: 'View Profile',
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/userDetail',
+                                      );
+                                    },
+                                  ),
+                                  // IconButton(
+                                  //   icon: const Icon(Icons.edit),
+                                  //   tooltip: 'Edit Profile',
+                                  //   onPressed: () async {
+                                  //     final result = await Navigator.pushNamed(
+                                  //       context,
+                                  //       '/editProfile',
+                                  //     );
+                                  //     if (result == true) {
+                                  //       _loadUser(); // Refresh if edited
+                                  //     }
+                                  //   },
+                                  // ),
+                                ],
+                              ),
+                              Text(
+                                _email ?? "",
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -115,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () {
                             item.isLogout
                                 ? _confirmLogout(context)
-                                : _showSnackBar(context, item.onTapMessage);
+                                : _navigationRoutes(context, item.route);
                           },
                           child: Card(
                             elevation: 4,
@@ -153,12 +194,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
       ],
     );
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _confirmLogout(BuildContext context) async {
@@ -202,12 +237,14 @@ class _SettingItem {
   final IconData icon;
   final String title;
   final String onTapMessage;
+  final String route;
   final bool isLogout;
 
   _SettingItem({
     required this.icon,
     required this.title,
     required this.onTapMessage,
+    required this.route,
     this.isLogout = false,
   });
 }

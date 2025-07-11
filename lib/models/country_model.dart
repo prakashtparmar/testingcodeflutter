@@ -1,27 +1,37 @@
-class Country {
+import 'package:snap_check/models/state_model.dart';
+
+class CountryModel {
   int? id;
   String? name;
   String? code;
   String? createdAt;
   String? updatedAt;
   String? deletedAt;
+  List<StateModel>? states;
 
-  Country({
+  CountryModel({
     this.id,
     this.name,
     this.code,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
+    this.states,
   });
 
-  Country.fromJson(Map<String, dynamic> json) {
+  CountryModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     name = json['name'];
     code = json['code'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     deletedAt = json['deleted_at'];
+    if (json['states'] != null) {
+      states = <StateModel>[];
+      json['states'].forEach((v) {
+        states!.add(StateModel.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -32,6 +42,19 @@ class Country {
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
     data['deleted_at'] = deletedAt;
+    if (states != null) {
+      data['states'] = states!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CountryModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

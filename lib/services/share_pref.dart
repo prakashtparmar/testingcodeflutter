@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 class SharedPrefHelper {
   static const String _userKey = 'logged_in_user';
   static const String _tokenKey = 'token';
+  static const String _activeDayLogId = 'activeDayLogId';
 
   // Save user
   static Future<void> saveUser(User user) async {
@@ -35,6 +36,24 @@ class SharedPrefHelper {
     return tokenString;
   }
 
+  static Future<void> saveActiveDayLogId(String activeDayLogId) async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.setString(_activeDayLogId, activeDayLogId);
+  }
+
+  static Future<String?> getActiveDayLogId() async {
+    final pref = await SharedPreferences.getInstance();
+    final activeDayLogId = pref.getString(_activeDayLogId);
+    if (activeDayLogId == null) return null;
+    return activeDayLogId;
+  }
+
+  // Clear activeDayLog
+  static Future<void> clearActiveDayLog() async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.remove(_activeDayLogId);
+  }
+
   // Clear user
   static Future<void> clearToken() async {
     final pref = await SharedPreferences.getInstance();
@@ -45,5 +64,6 @@ class SharedPrefHelper {
   static Future<void> clearUser() async {
     final pref = await SharedPreferences.getInstance();
     await pref.remove(_userKey);
+    await pref.remove(_tokenKey);
   }
 }

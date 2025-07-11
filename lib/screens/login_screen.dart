@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:snap_check/screens/forgot_password_screen.dart';
 import 'package:snap_check/screens/home_screen.dart';
-import 'package:snap_check/screens/signup_screen.dart';
 import 'package:snap_check/services/share_pref.dart';
 import '../services/auth_service.dart';
 
@@ -13,20 +11,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _domainController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-
-  // Email validation function
-  bool _isValidEmail(String email) {
-    final emailRegex = RegExp(
-      r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-    );
-    return emailRegex.hasMatch(email);
-  }
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -35,16 +27,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    if (!_isValidEmail(_emailController.text)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Please enter a valid email.")));
-      return;
+    if (!_formKey.currentState!.validate()) {
+      return; // Show validation errors
     }
 
     setState(() => _isLoading = true);
     try {
       final loginResponseModel = await _authService.signInWithEmailPassword(
+        _domainController.text,
         _emailController.text,
         _passwordController.text,
       );
@@ -52,11 +42,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (loginResponseModel != null) {
         if (loginResponseModel.success) {
-          SharedPrefHelper.saveToken(loginResponseModel.data!.token);
-          SharedPrefHelper.saveUser(loginResponseModel.data!.user);
+          SharedPrefHelper.saveToken(loginResponseModel.data!.token!);
+          SharedPrefHelper.saveUser(loginResponseModel.data!.user!);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => HomeScreen(title: "")),
+            MaterialPageRoute(builder: (_) => HomeScreen()),
           );
         } else {
           if (!mounted) return;
@@ -66,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
+      debugPrint(e.toString());
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -83,99 +74,95 @@ class _LoginScreenState extends State<LoginScreen> {
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Welcome Back",
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Login to continue",
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 32),
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Welcome Back",
+                      style: Theme.of(context).textTheme.displayLarge,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: _togglePasswordVisibility,
+                    const SizedBox(height: 8),
+                    Text(
+                      "Login to continue",
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _domainController,
+                      decoration: const InputDecoration(
+                        labelText: 'Company Code',
+                        prefixIcon: Icon(Icons.domain),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        "Forgot Password?",
-                        style: Theme.of(context).textTheme.titleSmall,
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Mobile or Email',
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _login,
-                      style: Theme.of(context).elevatedButtonTheme.style,
-                      child: Text(
-                        "Login",
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Mobile or Email is required';
+                        }
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SignupScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          "Sign Up",
-                          style: Theme.of(context).textTheme.titleSmall,
+                        final emailRegex = RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        );
+                        final mobileRegex = RegExp(
+                          r'^\d{10}$',
+                        ); // Simple 10-digit mobile
+
+                        if (!emailRegex.hasMatch(value.trim()) &&
+                            !mobileRegex.hasMatch(value.trim())) {
+                          return 'Enter a valid mobile number or email address';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: _togglePasswordVisibility,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Password is required';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _login,
+                        style: Theme.of(context).elevatedButtonTheme.style,
+                        child: Text("Login"),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
