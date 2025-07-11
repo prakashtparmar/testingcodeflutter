@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -118,17 +117,24 @@ class AppTheme {
         color: Colors.white,
       ),
       elevation: 0,
-      toolbarTextStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.white)
-        .bodyMedium?.copyWith(color: Colors.white),
+      toolbarTextStyle: _buildTextTheme(
+        ThemeData.light().textTheme,
+        Colors.white,
+      ).bodyMedium?.copyWith(color: Colors.white),
     ),
     textTheme: _buildTextTheme(ThemeData.light().textTheme, Colors.black87),
-    primaryTextTheme: _buildTextTheme(ThemeData.light().textTheme, Colors.white),
+    primaryTextTheme: _buildTextTheme(
+      ThemeData.light().textTheme,
+      Colors.white,
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColorLight,
         foregroundColor: Colors.white,
-        textStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.white)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.light().textTheme,
+          Colors.white,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -136,16 +142,20 @@ class AppTheme {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: primaryColorLight,
-        textStyle: _buildTextTheme(ThemeData.light().textTheme, primaryColorLight)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.light().textTheme,
+          primaryColorLight,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColorLight,
         side: BorderSide(color: primaryColorLight),
-        textStyle: _buildTextTheme(ThemeData.light().textTheme, primaryColorLight)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.light().textTheme,
+          primaryColorLight,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -167,28 +177,37 @@ class AppTheme {
         borderSide: BorderSide(color: errorColor),
       ),
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      labelStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.black54)
-        .bodyMedium,
-      hintStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.black38)
-        .bodyMedium,
-      errorStyle: _buildTextTheme(ThemeData.light().textTheme, errorColor)
-        .bodySmall?.copyWith(fontWeight: FontWeight.w500),
+      labelStyle:
+          _buildTextTheme(
+            ThemeData.light().textTheme,
+            Colors.black54,
+          ).bodyMedium,
+      hintStyle:
+          _buildTextTheme(
+            ThemeData.light().textTheme,
+            Colors.black38,
+          ).bodyMedium,
+      errorStyle: _buildTextTheme(
+        ThemeData.light().textTheme,
+        errorColor,
+      ).bodySmall?.copyWith(fontWeight: FontWeight.w500),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 1,
       margin: EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: Colors.white,
       selectedColor: primaryColorLight,
-      labelStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.black87)
-        .bodySmall,
-      secondaryLabelStyle: _buildTextTheme(ThemeData.light().textTheme, Colors.white)
-        .bodySmall,
+      labelStyle:
+          _buildTextTheme(
+            ThemeData.light().textTheme,
+            Colors.black87,
+          ).bodySmall,
+      secondaryLabelStyle:
+          _buildTextTheme(ThemeData.light().textTheme, Colors.white).bodySmall,
       brightness: Brightness.light,
     ),
   );
@@ -213,17 +232,22 @@ class AppTheme {
         color: Colors.white,
       ),
       elevation: 0,
-      toolbarTextStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white)
-        .bodyMedium,
+      toolbarTextStyle:
+          _buildTextTheme(ThemeData.dark().textTheme, Colors.white).bodyMedium,
     ),
-    textTheme: _buildTextTheme(ThemeData.dark().textTheme, Colors.white.withOpacity(0.9)),
+    textTheme: _buildTextTheme(
+      ThemeData.dark().textTheme,
+      Colors.white.withOpacity(0.9),
+    ),
     primaryTextTheme: _buildTextTheme(ThemeData.dark().textTheme, Colors.white),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColorDark,
         foregroundColor: Colors.white,
-        textStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.dark().textTheme,
+          Colors.white,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -231,16 +255,20 @@ class AppTheme {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: primaryColorDark,
-        textStyle: _buildTextTheme(ThemeData.dark().textTheme, primaryColorDark)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.dark().textTheme,
+          primaryColorDark,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColorDark,
         side: BorderSide(color: primaryColorDark),
-        textStyle: _buildTextTheme(ThemeData.dark().textTheme, primaryColorDark)
-          .labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: _buildTextTheme(
+          ThemeData.dark().textTheme,
+          primaryColorDark,
+        ).labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -262,28 +290,37 @@ class AppTheme {
         borderSide: BorderSide(color: errorColor),
       ),
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      labelStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white.withOpacity(0.7))
-        .bodyMedium,
-      hintStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white.withOpacity(0.5))
-        .bodyMedium,
-      errorStyle: _buildTextTheme(ThemeData.dark().textTheme, errorColor)
-        .bodySmall?.copyWith(fontWeight: FontWeight.w500),
+      labelStyle:
+          _buildTextTheme(
+            ThemeData.dark().textTheme,
+            Colors.white.withOpacity(0.7),
+          ).bodyMedium,
+      hintStyle:
+          _buildTextTheme(
+            ThemeData.dark().textTheme,
+            Colors.white.withOpacity(0.5),
+          ).bodyMedium,
+      errorStyle: _buildTextTheme(
+        ThemeData.dark().textTheme,
+        errorColor,
+      ).bodySmall?.copyWith(fontWeight: FontWeight.w500),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Color.fromRGBO(40, 45, 50, 1),
       elevation: 2,
       margin: EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: Color.fromRGBO(50, 55, 60, 1),
       selectedColor: primaryColorDark,
-      labelStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white.withOpacity(0.9))
-        .bodySmall,
-      secondaryLabelStyle: _buildTextTheme(ThemeData.dark().textTheme, Colors.white)
-        .bodySmall,
+      labelStyle:
+          _buildTextTheme(
+            ThemeData.dark().textTheme,
+            Colors.white.withOpacity(0.9),
+          ).bodySmall,
+      secondaryLabelStyle:
+          _buildTextTheme(ThemeData.dark().textTheme, Colors.white).bodySmall,
       brightness: Brightness.dark,
     ),
   );
