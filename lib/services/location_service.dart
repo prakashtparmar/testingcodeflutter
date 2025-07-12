@@ -11,6 +11,8 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:vibration/vibration.dart';
 
 /// Enum representing different GPS status states with their corresponding values
 enum GpsStatus {
@@ -77,6 +79,12 @@ class LocationService {
   /// Getter for tracking status
   bool get isTracking => _isTracking;
 
+  // Add these new instance variables
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  bool _lastNetworkState = true;
+  GpsStatus _lastGpsStatus = GpsStatus.enabled;
+
   /// Factory constructor returns the singleton instance
   factory LocationService() {
     return _instance;
@@ -89,6 +97,59 @@ class LocationService {
     _setupBackgroundService();
     _setupAppLifecycle();
     _initDatabase();
+    _initNotifications(); // Initialize notifications
+  }
+
+  // Add this new method to initialize notifications
+  Future<void> _initNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: null, // iOS not configured as we're focusing on Android
+        );
+
+    await _notificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (details) {},
+    );
+  }
+
+  // Add this new method to show notification with vibration
+  Future<void> _showAlertNotification({
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+          'location_alerts',
+          'Location Alerts',
+          channelDescription: 'Alerts for location tracking issues',
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: 'ticker',
+          enableVibration: true,
+          actions: [AndroidNotificationAction('settings', 'Open Settings')],
+        );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+    );
+
+    // Vibrate first
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(duration: 500);
+    }
+
+    // Then show notification
+    await _notificationsPlugin.show(
+      0, // Notification ID
+      title,
+      body,
+      notificationDetails,
+    );
   }
 
   /// Initializes the SQLite database for storing locations
@@ -172,13 +233,26 @@ class LocationService {
   /// Initializes the service by setting up connectivity monitoring
   Future<void> _initializeService() async {
     try {
-      // Listen for connectivity changes
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
         List<ConnectivityResult> result,
       ) {
-        _isConnected = result != ConnectivityResult.none;
+        final newState = result != ConnectivityResult.none;
+        if (newState != _lastNetworkState) {
+          _lastNetworkState = newState;
+          if (!newState) {
+            _showAlertNotification(
+              title: 'Network Lost',
+              body: 'Location tracking continues offline',
+            );
+          } else {
+            _showAlertNotification(
+              title: 'Network Restored',
+              body: 'Syncing locations with server',
+            );
+          }
+        }
+        _isConnected = newState;
         if (_isConnected) {
-          // When connectivity returns, sync any stored locations
           _syncStoredLocations();
         }
       }, onError: (error) => debugPrint('Connectivity error: $error'));
@@ -186,6 +260,7 @@ class LocationService {
       // Initial connectivity check
       final connectivityResult = await _connectivity.checkConnectivity();
       _isConnected = connectivityResult != ConnectivityResult.none;
+      _lastNetworkState = _isConnected;
 
       // Initialize service status monitoring
       await _checkAndMonitorServiceStatus();
@@ -195,16 +270,43 @@ class LocationService {
   }
 
   /// Checks and monitors the status of location services
+  // Modify the GPS status monitoring in _checkAndMonitorServiceStatus
   Future<void> _checkAndMonitorServiceStatus() async {
     // Initial check
     _serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    _lastGpsStatus = _serviceEnabled ? GpsStatus.enabled : GpsStatus.disabled;
+
     if (!_serviceEnabled && _isTracking) {
       debugPrint('Location service disabled while tracking');
+      await _showAlertNotification(
+        title: 'GPS Disabled',
+        body: 'Location tracking paused - enable GPS to continue',
+      );
       await stopTracking();
     }
 
-    // Set up service status stream to monitor changes
+    // Set up service status stream
     _serviceStatusStream = Geolocator.getServiceStatusStream().listen((status) {
+      final newStatus =
+          status == ServiceStatus.enabled
+              ? GpsStatus.enabled
+              : GpsStatus.disabled;
+
+      if (newStatus != _lastGpsStatus) {
+        _lastGpsStatus = newStatus;
+        if (newStatus == GpsStatus.disabled && _isTracking) {
+          _showAlertNotification(
+            title: 'GPS Signal Lost',
+            body: 'Location tracking may be inaccurate',
+          );
+        } else if (newStatus == GpsStatus.enabled && _isTracking) {
+          _showAlertNotification(
+            title: 'GPS Signal Restored',
+            body: 'Location tracking resumed',
+          );
+        }
+      }
+
       _serviceEnabled = status == ServiceStatus.enabled;
       if (!_serviceEnabled && _isTracking) {
         debugPrint('Location service disabled while tracking');
