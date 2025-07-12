@@ -45,7 +45,6 @@ class BasicService extends Service {
   }
 
   Future<DayLogResponseModel?> getDayLogs(String token) async {
-    debugPrint(apiDayLogs);
     final response = await http.get(
       Uri.parse(apiDayLogs),
       headers: {

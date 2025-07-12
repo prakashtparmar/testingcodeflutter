@@ -76,7 +76,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
       setState(() {
         _allLogs = logs;
-        _filteredLogs = List.from(logs);
+        _filteredLogs = logs;
       });
     } catch (e) {
       if (e is UnauthorizedException) {
@@ -122,34 +122,6 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
-  }
-
-  Future<void> _navigateToTracking(DayLogsDataModel log) async {
-    // Show loading indicator during navigation transition
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    final result = await Navigator.push(
-      context,
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (_, __, ___) => LiveMapScreen(logId: log.id!),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
-
-    // Remove loading indicator
-    if (mounted) Navigator.of(context).pop();
-
-    // Refresh if tracking was completed
-    if (result == true && mounted) {
-      await _fetchDayLogs();
-    }
   }
 
   @override
@@ -247,103 +219,99 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _navigateToTracking(log),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with date and status - FIXED OVERFLOW
-              Row(
-                children: [
-                  Flexible(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: theme.primaryColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            DateFormat(
-                              'MMM dd, yyyy hh:mm a',
-                            ).format(DateTime.parse(log.createdAt!)),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (hasClosingKm)
-                    Flexible(
-                      child: Chip(
-                        label: const Text('Completed'),
-                        backgroundColor: Colors.green[50],
-                        labelStyle: const TextStyle(color: Colors.green),
-                      ),
-                    ),
-                  if (log.approvalStatus != null) ...[
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Chip(
-                        label: Text(
-                          log.approvalStatus!.toUpperCase(),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        backgroundColor: _getApprovalColor(log.approvalStatus!),
-                        labelStyle: TextStyle(
-                          color: _getApprovalTextColor(log.approvalStatus!),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Rest of your existing content...
-              _buildInfoRow(
-                Icons.place,
-                log.placeToVisit ?? 'No location specified',
-              ),
-              _buildInfoRow(
-                Icons.work,
-                log.purpose?.name ?? 'No purpose specified',
-              ),
-
-              if (log.approvalReason != null && log.approvalStatus != 'pending')
-                const SizedBox(height: 8),
-              if (log.approvalReason != null && log.approvalStatus != 'pending')
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with date and status - FIXED OVERFLOW
+            Row(
+              children: [
+                Flexible(
                   child: Row(
                     children: [
-                      const Icon(Icons.info, size: 16, color: Colors.grey),
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: theme.primaryColor,
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(
+                      Flexible(
                         child: Text(
-                          'Reason: ${log.approvalReason}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          DateFormat(
+                            'MMM dd, yyyy hh:mm a',
+                          ).format(DateTime.parse(log.createdAt!)),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                if (hasClosingKm)
+                  Flexible(
+                    child: Chip(
+                      label: const Text('Completed'),
+                      backgroundColor: Colors.green[50],
+                      labelStyle: const TextStyle(color: Colors.green),
+                    ),
+                  ),
+                if (log.approvalStatus != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Chip(
+                      label: Text(
+                        log.approvalStatus!.toUpperCase(),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      backgroundColor: _getApprovalColor(log.approvalStatus!),
+                      labelStyle: TextStyle(
+                        color: _getApprovalTextColor(log.approvalStatus!),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Rest of your existing content...
+            _buildInfoRow(
+              Icons.place,
+              log.placeToVisit ?? 'No location specified',
+            ),
+            _buildInfoRow(
+              Icons.work,
+              log.purpose?.name ?? 'No purpose specified',
+            ),
+
+            if (log.approvalReason != null && log.approvalStatus != 'pending')
+              const SizedBox(height: 8),
+            if (log.approvalReason != null && log.approvalStatus != 'pending')
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Reason: ${log.approvalReason}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
