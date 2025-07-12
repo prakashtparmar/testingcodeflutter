@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:connectivity_plus/connectivity_plus.dart'; // For network checking
 import 'package:snap_check/models/day_logs_data_model.dart';
-import 'package:snap_check/screens/live_map_screen.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
