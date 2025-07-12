@@ -21,7 +21,9 @@ class DayLogsDataModel {
   String? endKmPhoto;
   String? status;
   String? approvalStatus;
-  User? approvedBy;
+  int? approvedBy;
+  User? approvedByUser;
+  User? user;
   String? approvalReason;
   String? approvedAt;
   String? createdAt;
@@ -85,15 +87,21 @@ class DayLogsDataModel {
     approvedAt = json['approved_at'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
-    travelMode = json['travel_mode'] != null
-        ? TourDetails.fromJson(json['travel_mode'])
-        : null;
-    purpose = json['purpose'] != null
-        ? TourDetails.fromJson(json['purpose'])
-        : null;
-    tourType = json['tour_type'] != null
-        ? TourDetails.fromJson(json['tour_type'])
-        : null;
+    travelMode =
+        json['travel_mode'] != null
+            ? TourDetails.fromJson(json['travel_mode'])
+            : null;
+    purpose =
+        json['purpose'] != null ? TourDetails.fromJson(json['purpose']) : null;
+    tourType =
+        json['tour_type'] != null
+            ? TourDetails.fromJson(json['tour_type'])
+            : null;
+    approvedByUser =
+        json['approved_by_user'] != null
+            ? User.fromJson(json['approved_by_user'])
+            : null;
+    user = json['user'] != null ? User.fromJson(json['user']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -130,6 +138,12 @@ class DayLogsDataModel {
     }
     if (tourType != null) {
       data['tour_type'] = tourType!.toJson();
+    }
+    if (approvedByUser != null) {
+      data['approved_by_user'] = approvedByUser!.toJson();
+    }
+    if (user != null) {
+      data['user'] = user!.toJson();
     }
     return data;
   }

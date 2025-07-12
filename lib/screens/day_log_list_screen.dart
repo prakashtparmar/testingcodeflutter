@@ -76,7 +76,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
 
       setState(() {
         _allLogs = logs;
-        _filteredLogs = List.from(logs);
+        _filteredLogs = logs;
       });
     } catch (e) {
       if (e is UnauthorizedException) {
@@ -304,7 +304,7 @@ class _DayLogsListScreenState extends State<DayLogsListScreen> {
                     Expanded(
                       child: Text(
                         'Reason: ${log.approvalReason}',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

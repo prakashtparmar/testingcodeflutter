@@ -248,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onPressed: () {
                           if (_activeDayLogDataModel == null) {
-                            _navigationRoutes(context, "/starTrip");
+                            _navigationRoutes(context, "/starTrip",true);
                           } else {
                             _redirectToCheckout();
                           }
@@ -273,17 +273,94 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: AppAssets.dayLogs,
                           title: "Day Logs",
                           onTap: () {
-                            _navigationRoutes(context, "/dayLogs");
+                            _navigationRoutes(context, "/dayLogs",true);
                           },
                         ),
-                        // _buildGridItem(
-                        //   context,
-                        //   icon: AppAssets.leaves,
-                        //   title: "Leaves",
-                        //   onTap: () {
-                        //     _navigationRoutes(context, "/leaves");
-                        //   },
-                        // ),
+                        _buildGridItem(
+                          context,
+                          icon: AppAssets.leaves,
+                          title: "Leaves",
+                          onTap: () {
+                            _navigationRoutes(context, "/leaves",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .budgetPlan, // Make sure to add this asset
+                          title: "Budget Plan",
+                          onTap: () {
+                            _navigationRoutes(context, "/budgetPlan",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .monthlyPlan, // Make sure to add this asset
+                          title: "Monthly Plan",
+                          onTap: () {
+                            _navigationRoutes(context, "/monthlyPlan",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .paymentCollection, // Make sure to add this asset
+                          title: "Payment Collection",
+                          onTap: () {
+                            _navigationRoutes(context, "/paymentCollection",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon: AppAssets.order, // Make sure to add this asset
+                          title: "Order",
+                          onTap: () {
+                            _navigationRoutes(context, "/order",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .partyVisit, // Make sure to add this asset
+                          title: "Party Visit",
+                          onTap: () {
+                            _navigationRoutes(context, "/partyVisit",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .partyStatement, // Make sure to add this asset
+                          title: "Party Statement",
+                          onTap: () {
+                            _navigationRoutes(context, "/partyStatement",false);
+                          },
+                        ),
+
+                        _buildGridItem(
+                          context,
+                          icon:
+                              AppAssets
+                                  .dayReport, // Make sure to add this asset
+                          title: "Day Report",
+                          onTap: () {
+                            _navigationRoutes(context, "/dayReport",false);
+                          },
+                        ),
+                        _buildGridItem(
+                          context,
+                          icon: AppAssets.stock, // Make sure to add this asset
+                          title: "Stock",
+                          onTap: () {
+                            _navigationRoutes(context, "/stock",false);
+                          },
+                        ),
                       ],
                     ),
                   ],
@@ -302,8 +379,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Function to show SnackBar
-  void _navigationRoutes(BuildContext context, String routeName) {
-    Navigator.pushNamed(context, routeName);
+  void _navigationRoutes(BuildContext context, String routeName, bool isExit) {
+    if (isExit) {
+      Navigator.pushNamed(context, routeName);
+    }else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Coming soon!")),
+        );
+    }
   }
 
   Widget _buildGridItem(
