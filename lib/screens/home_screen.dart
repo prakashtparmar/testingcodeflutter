@@ -75,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint("Only approximate location available");
       }
     }
-    await _fetchActiveDayLog();
   }
 
   Future<void> _fetchActiveDayLog() async {
@@ -248,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onPressed: () {
                           if (_activeDayLogDataModel == null) {
-                            _navigationRoutes(context, "/starTrip",true);
+                            _navigationRoutes(context, "/starTrip", true);
                           } else {
                             _redirectToCheckout();
                           }
@@ -273,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: AppAssets.dayLogs,
                           title: "Day Logs",
                           onTap: () {
-                            _navigationRoutes(context, "/dayLogs",true);
+                            _navigationRoutes(context, "/dayLogs", true);
                           },
                         ),
                         _buildGridItem(
@@ -281,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: AppAssets.leaves,
                           title: "Leaves",
                           onTap: () {
-                            _navigationRoutes(context, "/leaves",false);
+                            _navigationRoutes(context, "/leaves", false);
                           },
                         ),
                         _buildGridItem(
@@ -291,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .budgetPlan, // Make sure to add this asset
                           title: "Budget Plan",
                           onTap: () {
-                            _navigationRoutes(context, "/budgetPlan",false);
+                            _navigationRoutes(context, "/budgetPlan", false);
                           },
                         ),
                         _buildGridItem(
@@ -301,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .monthlyPlan, // Make sure to add this asset
                           title: "Monthly Plan",
                           onTap: () {
-                            _navigationRoutes(context, "/monthlyPlan",false);
+                            _navigationRoutes(context, "/monthlyPlan", false);
                           },
                         ),
                         _buildGridItem(
@@ -311,7 +310,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .paymentCollection, // Make sure to add this asset
                           title: "Payment Collection",
                           onTap: () {
-                            _navigationRoutes(context, "/paymentCollection",false);
+                            _navigationRoutes(
+                              context,
+                              "/paymentCollection",
+                              false,
+                            );
                           },
                         ),
                         _buildGridItem(
@@ -319,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: AppAssets.order, // Make sure to add this asset
                           title: "Order",
                           onTap: () {
-                            _navigationRoutes(context, "/order",false);
+                            _navigationRoutes(context, "/order", false);
                           },
                         ),
                         _buildGridItem(
@@ -329,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .partyVisit, // Make sure to add this asset
                           title: "Party Visit",
                           onTap: () {
-                            _navigationRoutes(context, "/partyVisit",false);
+                            _navigationRoutes(context, "/partyVisit", false);
                           },
                         ),
                         _buildGridItem(
@@ -339,7 +342,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .partyStatement, // Make sure to add this asset
                           title: "Party Statement",
                           onTap: () {
-                            _navigationRoutes(context, "/partyStatement",false);
+                            _navigationRoutes(
+                              context,
+                              "/partyStatement",
+                              false,
+                            );
                           },
                         ),
 
@@ -350,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .dayReport, // Make sure to add this asset
                           title: "Day Report",
                           onTap: () {
-                            _navigationRoutes(context, "/dayReport",false);
+                            _navigationRoutes(context, "/dayReport", false);
                           },
                         ),
                         _buildGridItem(
@@ -358,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: AppAssets.stock, // Make sure to add this asset
                           title: "Stock",
                           onTap: () {
-                            _navigationRoutes(context, "/stock",false);
+                            _navigationRoutes(context, "/stock", false);
                           },
                         ),
                       ],
@@ -382,10 +389,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigationRoutes(BuildContext context, String routeName, bool isExit) {
     if (isExit) {
       Navigator.pushNamed(context, routeName);
-    }else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Coming soon!")),
-        );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Coming soon!")));
     }
   }
 

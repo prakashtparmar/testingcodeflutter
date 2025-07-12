@@ -223,6 +223,21 @@ class BasicService extends Service {
     return ActiveDayLogResponseModel.fromJson(_handleResponse(response));
   }
 
+  Future<LeaveRequestResponseModel?> postFailedJob(
+    Map<String, Object> body,
+  ) async {
+    final response = await http.post(
+      Uri.parse(apiFailedJob),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    return LeaveRequestResponseModel.fromJson(_handleResponse(response));
+  }
+
   dynamic _handleResponse(http.Response response) {
     debugPrint('Response URL: ${response.request!.url.path}');
     debugPrint('Response Headers: ${response.request!.headers.values}');
