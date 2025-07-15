@@ -58,6 +58,12 @@ class LocationService {
 
   factory LocationService() => _instance;
 
+  double? _lastSentLatitude;
+  double? _lastSentLongitude;
+  DateTime? _lastLocationSentTime;
+  static const double _locationChangeThreshold = 0.0001; // ~11 meters
+  static const Duration _minLocationSendInterval = Duration(seconds: 30);
+
   @pragma('vm:entry-point')
   LocationService._internal() {
     _initializeService();
@@ -345,23 +351,28 @@ class LocationService {
     return true;
   }
 
+  // Modify your stopTracking method to include this sync
   Future<void> stopTracking() async {
     if (!_isTracking) return;
 
     debugPrint('Stopping tracking service...');
+
+    // First attempt to sync all remaining locations
+    await syncAllUnsyncedLocationsBeforeClosing();
+
     _locationTimer?.cancel();
     _locationTimer = null;
     await _positionStream?.cancel();
     _positionStream = null;
-    await _syncStoredLocations();
 
     _isTracking = false;
     _currentToken = null;
     _currentDayLogId = null;
+    _lastSentLatitude = null;
+    _lastSentLongitude = null;
+    _lastLocationSentTime = null;
 
     try {
-      // await _platform.invokeMethod('stopBackgroundService');
-
       if (Platform.isAndroid) {
         final service = FlutterBackgroundService();
         if (await service.isRunning()) {
@@ -556,13 +567,12 @@ class LocationService {
     }
   }
 
+  // Enhance _handleAppForegrounded to force sync unsynced locations
   void _handleAppForegrounded() async {
     if (!_isTracking) return;
     debugPrint('App moved to foreground - adjusting location tracking');
 
     try {
-      // await _platform.invokeMethod('stopBackgroundService');
-
       if (Platform.isAndroid) {
         final service = FlutterBackgroundService();
         if (await service.isRunning()) service.invoke('stopService');
@@ -571,6 +581,9 @@ class LocationService {
 
       _positionStream?.resume();
       _startPeriodicLocationUpdates();
+
+      // Force sync of any unsynced locations when app comes to foreground
+      await _syncStoredLocations(force: true);
     } catch (e) {
       debugPrint('Error stopping background service: $e');
     }
@@ -671,8 +684,11 @@ class LocationService {
     return isTrackingActive || isBackgroundServiceRunning;
   }
 
-  Future<void> _syncStoredLocations() async {
-    if (!_isConnected || _currentToken == null || _currentDayLogId == null) {
+  // Modify _syncStoredLocations to accept force parameter
+  Future<void> _syncStoredLocations({bool force = false}) async {
+    if ((!_isConnected && !force) ||
+        _currentToken == null ||
+        _currentDayLogId == null) {
       return;
     }
 
@@ -752,6 +768,23 @@ class LocationService {
     double latitude,
     double longitude,
   ) async {
+    // Check if location has changed significantly or enough time has passed
+    final now = DateTime.now();
+    final hasMovedSignificantly =
+        _lastSentLatitude == null ||
+        _lastSentLongitude == null ||
+        (latitude - _lastSentLatitude!).abs() > _locationChangeThreshold ||
+        (longitude - _lastSentLongitude!).abs() > _locationChangeThreshold;
+
+    final shouldSendDueToTime =
+        _lastLocationSentTime == null ||
+        now.difference(_lastLocationSentTime!) > _minLocationSendInterval;
+
+    if (!hasMovedSignificantly && !shouldSendDueToTime) {
+      debugPrint('Location unchanged - skipping API call');
+      return;
+    }
+
     int? batteryLevel;
     try {
       batteryLevel = await _battery.batteryLevel;
@@ -774,6 +807,11 @@ class LocationService {
     };
 
     await _saveLocationToDatabase(locationPayload);
+
+    // Update last sent location info
+    _lastSentLatitude = latitude;
+    _lastSentLongitude = longitude;
+    _lastLocationSentTime = now;
 
     if (!_isConnected) {
       debugPrint(
@@ -905,5 +943,110 @@ class LocationService {
     }
 
     debugPrint('All attempts to log error failed');
+  }
+
+  // Add this method to your LocationService class
+  Future<void> syncAllUnsyncedLocationsBeforeClosing() async {
+    if (_currentToken == null || _currentDayLogId == null) {
+      debugPrint('No active trip - nothing to sync');
+      return;
+    }
+
+    debugPrint(
+      'Starting final sync of all unsynced locations before closing trip',
+    );
+
+    // Get all unsynced locations
+    final unsyncedLocations = await _getUnsyncedLocations();
+    if (unsyncedLocations.isEmpty) {
+      debugPrint('No unsynced locations found');
+      return;
+    }
+
+    debugPrint('Found ${unsyncedLocations.length} unsynced locations to sync');
+
+    final successfulIds = <int>[];
+    const batchSize = 5; // Smaller batch size for more reliable final sync
+    final batches = (unsyncedLocations.length / batchSize).ceil();
+
+    for (var i = 0; i < batches; i++) {
+      final start = i * batchSize;
+      final end = (i + 1) * batchSize;
+      final batch = unsyncedLocations.sublist(
+        start,
+        end > unsyncedLocations.length ? unsyncedLocations.length : end,
+      );
+
+      try {
+        // Use longer timeout for final sync attempts
+        final responses = await Future.wait(
+          batch.map((location) async {
+            final payload = {
+              "trip_id": _currentDayLogId!,
+              "latitude": location['latitude'],
+              "longitude": location['longitude'],
+              "gps_status": location['gps_status'],
+              if (location['battery_level'] != null)
+                "battery_percentage": "${location['battery_level']}",
+              "timestamp": location['timestamp'],
+            };
+
+            final response = await BasicService()
+                .postDayLogLocations(_currentToken!, payload)
+                .timeout(const Duration(seconds: 30)); // Extended timeout
+
+            return {
+              'id': location['id'],
+              'success': response?.success ?? false,
+            };
+          }),
+        );
+
+        successfulIds.addAll(
+          responses
+              .where((r) => r['success'] as bool)
+              .map((r) => r['id'] as int),
+        );
+
+        // If any in batch failed, stop and preserve remaining for next attempt
+        if (responses.any((r) => !(r['success'] as bool))) {
+          debugPrint('Batch $i had failures - stopping final sync');
+          break;
+        }
+      } catch (e) {
+        debugPrint('Error syncing final batch $i: $e');
+        await _logErrorToServer(
+          errorType: 'FinalSyncError',
+          errorMessage: e.toString(),
+          context: 'LocationService.syncAllUnsyncedLocationsBeforeClosing',
+          additionalData: {'batch_index': i},
+        );
+        break;
+      }
+    }
+
+    if (successfulIds.isNotEmpty) {
+      await _markLocationsAsSynced(successfulIds);
+      debugPrint(
+        'Successfully synced ${successfulIds.length} locations in final attempt',
+      );
+    }
+
+    // Log how many locations remain unsynced
+    final remainingUnsynced = unsyncedLocations.length - successfulIds.length;
+    if (remainingUnsynced > 0) {
+      debugPrint(
+        'Warning: $remainingUnsynced locations remain unsynced after final attempt',
+      );
+      await _logErrorToServer(
+        errorType: 'RemainingUnsyncedLocations',
+        errorMessage: '$remainingUnsynced locations could not be synced',
+        context: 'LocationService.syncAllUnsyncedLocationsBeforeClosing',
+        additionalData: {
+          'total_unsynced': unsyncedLocations.length,
+          'successfully_synced': successfulIds.length,
+        },
+      );
+    }
   }
 }

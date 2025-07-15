@@ -51,15 +51,31 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     final hasLocationPermission = await permissionHandler.hasLocationPermission;
-    if (!hasLocationPermission) {
-      bool granted = await permissionHandler.requestLocationPermission();
-      if (granted) {
-        debugPrint("User granted location permission");
-        // Proceed with location-related tasks
-      } else {
-        debugPrint("User denied location permission");
-        // Show a message or open app settings
+    final hasPreciseLocationPermission =
+        await permissionHandler.hasPreciseLocationPermission;
+    if (!hasLocationPermission || !hasPreciseLocationPermission) {
+      if (!hasLocationPermission) {
+        bool granted = await permissionHandler.requestLocationPermission();
+        if (granted) {
+          debugPrint("User granted location permission");
+          // Proceed with location-related tasks
+        } else {
+          debugPrint("User denied location permission");
+          // Show a message or open app settings
+        }
       }
+      if (!hasPreciseLocationPermission) {
+        bool granted =
+            await permissionHandler.requestPreciseLocationPermission();
+        if (granted) {
+          debugPrint("User granted Precise location permission");
+          // Proceed with location-related tasks
+        } else {
+          debugPrint("User denied Precise location permission");
+          // Show a message or open app settings
+        }
+      }
+
       // Optionally show user guidance
     }
     bool isLocationEnabled = await permissionHandler.areLocationServicesEnabled;
