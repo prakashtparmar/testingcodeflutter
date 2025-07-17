@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:snap_check/models/day_log_store_locations_response_model.dart';
 import 'package:snap_check/services/basic_service.dart';
@@ -30,7 +31,7 @@ class LocationService {
   static final LocationService _instance = LocationService._internal();
   static const MethodChannel _platform = MethodChannel('location_tracker');
   static const int _maxErrorRetryAttempts = 3;
-
+  final DateFormat apiFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   final Battery _battery = Battery();
   final Connectivity _connectivity = Connectivity();
 
@@ -86,7 +87,7 @@ class LocationService {
           await db.execute('''
             CREATE TABLE locations(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              timestamp INTEGER NOT NULL,
+              recorded_at INTEGER NOT NULL,
               latitude REAL NOT NULL,
               longitude REAL NOT NULL,
               gps_status INTEGER NOT NULL,
@@ -106,7 +107,7 @@ class LocationService {
 
     try {
       await _locationDatabase!.insert('locations', {
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'recorded_at': DateTime.now().millisecondsSinceEpoch,
         'latitude': location['latitude'],
         'longitude': location['longitude'],
         'gps_status': location['gps_status'],
@@ -124,7 +125,7 @@ class LocationService {
       return await _locationDatabase!.query(
         'locations',
         where: 'synced = 0',
-        orderBy: 'timestamp ASC',
+        orderBy: 'recorded_at ASC',
       );
     } catch (e) {
       debugPrint('Error getting unsynced locations: $e');
@@ -715,6 +716,11 @@ class LocationService {
       try {
         final responses = await Future.wait(
           batch.map((location) async {
+            final String formattedDate = DateFormat(
+              'yyyy-MM-dd HH:mm:ss',
+            ).format(
+              DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+            );
             final payload = {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
@@ -722,7 +728,7 @@ class LocationService {
               "gps_status": location['gps_status'],
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
-              "timestamp": location['timestamp'],
+              "recorded_at": formattedDate,
             };
 
             DayLogStoreLocationResponseModel? response = await BasicService()
@@ -804,6 +810,7 @@ class LocationService {
       "latitude": latitude,
       "longitude": longitude,
       "gps_status": "${gpsStatus.value}",
+      "recorded_at": apiFormat.format(DateTime.now()),
       if (batteryLevel != null) "battery_percentage": "$batteryLevel",
     };
 
@@ -982,6 +989,11 @@ class LocationService {
         // Use longer timeout for final sync attempts
         final responses = await Future.wait(
           batch.map((location) async {
+            final String formattedDate = DateFormat(
+              'yyyy-MM-dd HH:mm:ss',
+            ).format(
+              DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+            );
             final payload = {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
@@ -989,7 +1001,7 @@ class LocationService {
               "gps_status": location['gps_status'],
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
-              "timestamp": location['timestamp'],
+              "recorded_at": formattedDate,
             };
 
             final response = await BasicService()
