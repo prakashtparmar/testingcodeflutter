@@ -24,7 +24,7 @@ class StartTripScreen extends StatefulWidget {
 
 class _StartTripScreenState extends State<StartTripScreen> {
   final DateFormat displayFormat = DateFormat('d MMMM yyyy');
-  final DateFormat apiFormat = DateFormat('yyyy/MM/dd');
+  final DateFormat apiFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
   final BasicService _basicService = BasicService();
   final List<String> purposesWithParties = [
@@ -316,7 +316,9 @@ class _StartTripScreenState extends State<StartTripScreen> {
 
         // Start tracking
         if (locationService.isTracking) {
-          debugPrint("locationService.isTracking ${locationService.isTracking}");
+          debugPrint(
+            "locationService.isTracking ${locationService.isTracking}",
+          );
         } else {
           bool started = await locationService.startTracking(
             token: tokenData,

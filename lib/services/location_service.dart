@@ -330,6 +330,7 @@ class LocationService {
     // await _sendCurrentLocation();
     // _startPeriodicLocationUpdates();
 
+    _positionStream?.cancel();
     _positionStream = Geolocator.getPositionStream(
       locationSettings: LocationSettings(
         accuracy:
@@ -577,14 +578,35 @@ class LocationService {
     try {
       if (Platform.isAndroid) {
         final service = FlutterBackgroundService();
-        if (await service.isRunning()) service.invoke('stopService');
-        await Workmanager().cancelByTag('1');
+        if (await service.isRunning()) {
+          service.invoke('stopService');
+          await Workmanager().cancelByTag('1');
+        }
       }
 
-      _positionStream?.resume();
-      // _startPeriodicLocationUpdates();
+      // Cancel and recreate the stream
+      await _positionStream?.cancel();
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      ).listen(
+        (Position position) {
+          if (_isValidLocation(position)) {
+            _sendLocationToAPI(
+              _currentToken!,
+              _currentDayLogId!,
+              position.latitude,
+              position.longitude,
+            );
+          }
+        },
+        onError: (e) {
+          debugPrint('Position stream error on resume: $e');
+        },
+      );
 
-      // Force sync of any unsynced locations when app comes to foreground
       await _syncStoredLocations(force: true);
     } catch (e) {
       debugPrint('Error stopping background service: $e');
