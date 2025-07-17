@@ -1,5 +1,5 @@
 class Service {
-  final String baseUrl = 'http://192.168.1.69:8000/api';
+  final String baseUrl = 'http://192.168.1.4:8000/api';
 
   late final String apiLogin,
       apiRegister,

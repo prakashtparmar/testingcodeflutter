@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -33,7 +34,7 @@ class LocationService {
   final Battery _battery = Battery();
   final Connectivity _connectivity = Connectivity();
 
-  Timer? _locationTimer;
+  // Timer? _locationTimer;
   StreamSubscription? _connectivitySubscription;
   StreamSubscription<Position>? _positionStream;
   StreamSubscription<ServiceStatus>? _serviceStatusStream;
@@ -48,8 +49,8 @@ class LocationService {
   bool _isConnected = true;
   static bool _isInBackground = false;
 
-  static const int _foregroundInterval = 15;
-  static const int _backgroundInterval = 30;
+  static const int _foregroundInterval = 10;
+  static const int _backgroundInterval = 10;
   static const Duration _apiTimeout = Duration(seconds: 15);
   static const String _backgroundTaskName = 'locationBackgroundTask';
   static const String _locationDatabaseName = 'locations.db';
@@ -325,8 +326,8 @@ class LocationService {
 
     _isTracking = true;
     await _syncStoredLocations();
-    await _sendCurrentLocation();
-    _startPeriodicLocationUpdates();
+    // await _sendCurrentLocation();
+    // _startPeriodicLocationUpdates();
 
     _positionStream = Geolocator.getPositionStream(
       locationSettings: LocationSettings(
@@ -360,8 +361,8 @@ class LocationService {
     // First attempt to sync all remaining locations
     await syncAllUnsyncedLocationsBeforeClosing();
 
-    _locationTimer?.cancel();
-    _locationTimer = null;
+    // _locationTimer?.cancel();
+    // _locationTimer = null;
     await _positionStream?.cancel();
     _positionStream = null;
 
@@ -545,7 +546,7 @@ class LocationService {
         final service = FlutterBackgroundService();
         await service.startService();
         _positionStream?.pause();
-        _locationTimer?.cancel();
+        // _locationTimer?.cancel();
 
         await Workmanager().registerPeriodicTask(
           '1',
@@ -580,7 +581,7 @@ class LocationService {
       }
 
       _positionStream?.resume();
-      _startPeriodicLocationUpdates();
+      // _startPeriodicLocationUpdates();
 
       // Force sync of any unsynced locations when app comes to foreground
       await _syncStoredLocations(force: true);
@@ -589,18 +590,18 @@ class LocationService {
     }
   }
 
-  // Other Methods
-  Future<void> _startPeriodicLocationUpdates() async {
-    _locationTimer?.cancel();
-    await _optimizeForBattery();
-
-    _locationTimer = Timer.periodic(
-      Duration(
-        seconds: _isInBackground ? _backgroundInterval : _foregroundInterval,
-      ),
-      (_) => _sendCurrentLocation(),
-    );
-  }
+  // // Other Methods
+  // Future<void> _startPeriodicLocationUpdates() async {
+  //   _locationTimer?.cancel();
+  //   await _optimizeForBattery();
+  //
+  //   _locationTimer = Timer.periodic(
+  //     Duration(
+  //       seconds: _isInBackground ? _backgroundInterval : _foregroundInterval,
+  //     ),
+  //     (_) => _sendCurrentLocation(),
+  //   );
+  // }
 
   Future<bool> _checkLocationServices() async {
     try {
@@ -641,11 +642,11 @@ class LocationService {
         debugPrint(
           'Low battery ($level%) - reducing location update frequency',
         );
-        _locationTimer?.cancel();
-        _locationTimer = Timer.periodic(
-          Duration(seconds: _isInBackground ? 180 : 90),
-          (_) => _sendCurrentLocation(),
-        );
+        // _locationTimer?.cancel();
+        // _locationTimer = Timer.periodic(
+        //   Duration(seconds: _isInBackground ? 180 : 90),
+        //   (_) => _sendCurrentLocation(),
+        // );
       }
     } catch (e) {
       debugPrint('Error checking battery level: $e');
@@ -705,7 +706,7 @@ class LocationService {
 
     for (var i = 0; i < batches; i++) {
       final start = i * batchSize;
-      final end = (i + 1) * batchSize;
+      final end = min((i + 1) * batchSize, unsyncedLocations.length);
       final batch = unsyncedLocations.sublist(
         start,
         end > unsyncedLocations.length ? unsyncedLocations.length : end,
@@ -742,7 +743,7 @@ class LocationService {
         );
 
         if (responses.any((r) => !(r['success'] as bool))) {
-          break;
+          continue;
         }
       } catch (e) {
         debugPrint('Error syncing batch $i: $e');
@@ -971,7 +972,7 @@ class LocationService {
 
     for (var i = 0; i < batches; i++) {
       final start = i * batchSize;
-      final end = (i + 1) * batchSize;
+      final end = min((i + 1) * batchSize, unsyncedLocations.length);
       final batch = unsyncedLocations.sublist(
         start,
         end > unsyncedLocations.length ? unsyncedLocations.length : end,
@@ -1011,7 +1012,7 @@ class LocationService {
         // If any in batch failed, stop and preserve remaining for next attempt
         if (responses.any((r) => !(r['success'] as bool))) {
           debugPrint('Batch $i had failures - stopping final sync');
-          break;
+          continue;
         }
       } catch (e) {
         debugPrint('Error syncing final batch $i: $e');
