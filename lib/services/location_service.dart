@@ -87,12 +87,14 @@ class LocationService {
           await db.execute('''
             CREATE TABLE locations(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
+              trip_id INTEGER,
               recorded_at INTEGER NOT NULL,
               latitude REAL NOT NULL,
               longitude REAL NOT NULL,
               gps_status INTEGER NOT NULL,
               battery_level INTEGER,
               synced INTEGER DEFAULT 0
+              
             )
           ''');
         },
@@ -102,12 +104,16 @@ class LocationService {
     }
   }
 
-  Future<void> _saveLocationToDatabase(Map<String, dynamic> location) async {
+  Future<void> _saveLocationToDatabase(
+    Map<String, dynamic> location,
+    String tripId,
+  ) async {
     if (_locationDatabase == null) return;
 
     try {
       await _locationDatabase!.insert('locations', {
         'recorded_at': DateTime.now().millisecondsSinceEpoch,
+        'trip_id': int.tryParse(tripId),
         'latitude': location['latitude'],
         'longitude': location['longitude'],
         'gps_status': location['gps_status'],
@@ -119,16 +125,23 @@ class LocationService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _getUnsyncedLocations() async {
-    if (_locationDatabase == null) return [];
+  Future<List<Map<String, dynamic>>> _getUnsyncedLocations(int tripId) async {
+    if (_locationDatabase == null) {
+      debugPrint('Database is not initialized');
+      return [];
+    }
+
     try {
-      return await _locationDatabase!.query(
+      final result = await _locationDatabase!.query(
         'locations',
-        where: 'synced = 0',
+        where: 'synced = ? AND trip_id = ?',
+        whereArgs: [0, tripId],
         orderBy: 'recorded_at ASC',
       );
+      debugPrint('Unsynced locations for trip $tripId: $result');
+      return result;
     } catch (e) {
-      debugPrint('Error getting unsynced locations: $e');
+      debugPrint('Error getting unsynced locations for trip $tripId: $e');
       return [];
     }
   }
@@ -152,15 +165,20 @@ class LocationService {
   // Service Initialization
   Future<void> _initializeService() async {
     try {
-      _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
-        List<ConnectivityResult> result,
-      ) {
-        _isConnected = result != ConnectivityResult.none;
-        if (_isConnected) _syncStoredLocations();
-      }, onError: (error) => debugPrint('Connectivity error: $error'));
+      _connectivitySubscription = _connectivity.onConnectivityChanged
+          .cast<List<ConnectivityResult>>() // Force cast
+          .listen((List<ConnectivityResult> result) {
+            _isConnected = result.any((r) => r != ConnectivityResult.none);
+            debugPrint('Connectivity changed (multi): $_isConnected');
 
-      final connectivityResult = await _connectivity.checkConnectivity();
-      _isConnected = connectivityResult != ConnectivityResult.none;
+            if (_isConnected) _syncStoredLocations();
+          }, onError: (error) => debugPrint('Connectivity error: $error'));
+
+      final List<ConnectivityResult> initialResult =
+          await _connectivity.checkConnectivity();
+      _isConnected = initialResult.any((r) => r != ConnectivityResult.none);
+
+      debugPrint('Initial connectivity (multi): $_isConnected');
 
       await _checkAndMonitorServiceStatus();
     } catch (error) {
@@ -360,11 +378,9 @@ class LocationService {
 
     debugPrint('Stopping tracking service...');
 
-    // First attempt to sync all remaining locations
+    // Ensure no simultaneous access to the DB
     await syncAllUnsyncedLocationsBeforeClosing();
 
-    // _locationTimer?.cancel();
-    // _locationTimer = null;
     await _positionStream?.cancel();
     _positionStream = null;
 
@@ -388,6 +404,10 @@ class LocationService {
     } catch (e) {
       debugPrint('Error stopping services: $e');
     }
+
+    // 💡 Now safe to close DB
+    await _locationDatabase?.close();
+    _locationDatabase = null;
   }
 
   // Helper Methods
@@ -716,7 +736,9 @@ class LocationService {
       return;
     }
 
-    final unsyncedLocations = await _getUnsyncedLocations();
+    final unsyncedLocations = await _getUnsyncedLocations(
+      int.tryParse(_currentDayLogId!) ?? 0,
+    );
     if (unsyncedLocations.isEmpty) return;
 
     debugPrint(
@@ -747,7 +769,7 @@ class LocationService {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": location['gps_status'],
+              "gps_status": "${location['gps_status']}",
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,
@@ -836,7 +858,7 @@ class LocationService {
       if (batteryLevel != null) "battery_percentage": "$batteryLevel",
     };
 
-    await _saveLocationToDatabase(locationPayload);
+    await _saveLocationToDatabase(locationPayload, dayLogId);
 
     // Update last sent location info
     _lastSentLatitude = latitude;
@@ -987,7 +1009,9 @@ class LocationService {
     );
 
     // Get all unsynced locations
-    final unsyncedLocations = await _getUnsyncedLocations();
+    final unsyncedLocations = await _getUnsyncedLocations(
+      int.tryParse(_currentDayLogId!) ?? 0,
+    );
     if (unsyncedLocations.isEmpty) {
       debugPrint('No unsynced locations found');
       return;
@@ -1020,7 +1044,7 @@ class LocationService {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": location['gps_status'],
+              "gps_status": "${location['gps_status']}",
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,

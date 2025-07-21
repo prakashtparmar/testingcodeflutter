@@ -197,7 +197,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         await locationService.stopTracking();
 
         // Dispose when done
-        await locationService.dispose();
+        // await locationService.dispose();
 
         // Verify service is stopped
         isRunning = await locationService.isServiceRunning();

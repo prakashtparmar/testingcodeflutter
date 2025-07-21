@@ -192,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       debugPrint("Stopping tracking services...");
       await locationService.stopTracking();
-      await locationService.dispose();
+      // await locationService.dispose();
       debugPrint("Tracking services stopped successfully");
     } catch (e) {
       debugPrint("Error stopping tracking services: $e");
