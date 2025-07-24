@@ -68,6 +68,7 @@ class LocationService {
 
   @pragma('vm:entry-point')
   LocationService._internal() {
+    debugPrint('[LocationService] Initializing LocationService singleton instance');
     _initializeService();
     _setupBackgroundService();
     _setupAppLifecycle();
@@ -77,87 +78,114 @@ class LocationService {
   // Database Methods
   Future<void> _initDatabase() async {
     try {
+      debugPrint('[LocationService] Initializing database...');
       final databasesPath = await getDatabasesPath();
       final path = join(databasesPath, _locationDatabaseName);
+      debugPrint('[LocationService] Database path: $path');
 
       _locationDatabase = await openDatabase(
         path,
         version: 1,
         onCreate: (db, version) async {
+          debugPrint('[LocationService] Creating new database version $version');
           await db.execute('''
             CREATE TABLE locations(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              trip_id INTEGER,
               recorded_at INTEGER NOT NULL,
               latitude REAL NOT NULL,
               longitude REAL NOT NULL,
               gps_status INTEGER NOT NULL,
               battery_level INTEGER,
               synced INTEGER DEFAULT 0
-              
             )
           ''');
+          debugPrint('[LocationService] Database table created successfully');
         },
       );
+      debugPrint('[LocationService] Database initialized successfully');
     } catch (e) {
-      debugPrint('Database initialization error: $e');
+      debugPrint('[LocationService] Database initialization error: $e');
+      await _logErrorToServer(
+        errorType: 'DatabaseInitError',
+        errorMessage: e.toString(),
+        context: 'LocationService._initDatabase',
+      );
     }
   }
 
-  Future<void> _saveLocationToDatabase(
-    Map<String, dynamic> location,
-    String tripId,
-  ) async {
-    if (_locationDatabase == null) return;
+  Future<void> _saveLocationToDatabase(Map<String, dynamic> location) async {
+    if (_locationDatabase == null) {
+      debugPrint('[LocationService] Database not initialized - cannot save location');
+      return;
+    }
 
     try {
-      await _locationDatabase!.insert('locations', {
+      debugPrint('[LocationService] Saving location to database: ${location['latitude']}, ${location['longitude']}');
+      final id = await _locationDatabase!.insert('locations', {
         'recorded_at': DateTime.now().millisecondsSinceEpoch,
-        'trip_id': int.tryParse(tripId),
         'latitude': location['latitude'],
         'longitude': location['longitude'],
         'gps_status': location['gps_status'],
         'battery_level': location['battery_percentage'],
         'synced': 0,
       });
+      debugPrint('[LocationService] Location saved to database with id: $id');
     } catch (e) {
-      debugPrint('Error saving location to database: $e');
+      debugPrint('[LocationService] Error saving location to database: $e');
+      await _logErrorToServer(
+        errorType: 'DatabaseSaveError',
+        errorMessage: e.toString(),
+        context: 'LocationService._saveLocationToDatabase',
+        additionalData: {'location_data': location},
+      );
     }
   }
 
-  Future<List<Map<String, dynamic>>> _getUnsyncedLocations(int tripId) async {
+  Future<List<Map<String, dynamic>>> _getUnsyncedLocations() async {
     if (_locationDatabase == null) {
-      debugPrint('Database is not initialized');
+      debugPrint('[LocationService] Database not initialized - cannot get unsynced locations');
       return [];
     }
-
+    
     try {
-      final result = await _locationDatabase!.query(
+      debugPrint('[LocationService] Fetching unsynced locations from database');
+      final locations = await _locationDatabase!.query(
         'locations',
-        where: 'synced = ? AND trip_id = ?',
-        whereArgs: [0, tripId],
+        where: 'synced = 0',
         orderBy: 'recorded_at ASC',
       );
-      debugPrint('Unsynced locations for trip $tripId: $result');
-      return result;
+      debugPrint('[LocationService] Found ${locations.length} unsynced locations');
+      return locations;
     } catch (e) {
-      debugPrint('Error getting unsynced locations for trip $tripId: $e');
+      debugPrint('[LocationService] Error getting unsynced locations: $e');
+      await _logErrorToServer(
+        errorType: 'DatabaseQueryError',
+        errorMessage: e.toString(),
+        context: 'LocationService._getUnsyncedLocations',
+      );
       return [];
     }
   }
 
   Future<void> _markLocationsAsSynced(List<int> ids) async {
-    if (_locationDatabase == null || ids.isEmpty) return;
+    if (_locationDatabase == null || ids.isEmpty) {
+      debugPrint('[LocationService] Database not initialized or empty ids list - cannot mark as synced');
+      return;
+    }
+    
     try {
+      debugPrint('[LocationService] Marking ${ids.length} locations as synced: $ids');
       await _locationDatabase!.update('locations', {
         'synced': 1,
       }, where: 'id IN (${ids.join(',')})');
+      debugPrint('[LocationService] Successfully marked locations as synced');
     } catch (e) {
-      debugPrint('Error marking locations as synced: $e');
+      debugPrint('[LocationService] Error marking locations as synced: $e');
       await _logErrorToServer(
         errorType: 'DatabaseSyncError',
         errorMessage: e.toString(),
         context: 'LocationService._markLocationsAsSynced',
+        additionalData: {'ids': ids},
       );
     }
   }
@@ -165,26 +193,29 @@ class LocationService {
   // Service Initialization
   Future<void> _initializeService() async {
     try {
-      _connectivitySubscription = _connectivity.onConnectivityChanged
-          .cast<List<ConnectivityResult>>() // Force cast
-          .listen((List<ConnectivityResult> result) {
-            _isConnected = result.any((r) => r != ConnectivityResult.none);
-            debugPrint('Connectivity changed (multi): $_isConnected');
+      debugPrint('[LocationService] Initializing service...');
+      
+      _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
+        List<ConnectivityResult> result,
+      ) {
+        _isConnected = result != ConnectivityResult.none;
+        debugPrint('[LocationService] Connectivity changed: ${_isConnected ? 'Connected' : 'Disconnected'}');
+        if (_isConnected) {
+          debugPrint('[LocationService] Network available - attempting to sync stored locations');
+          _syncStoredLocations();
+        }
+      }, onError: (error) => debugPrint('[LocationService] Connectivity error: $error'));
 
-            if (_isConnected) _syncStoredLocations();
-          }, onError: (error) => debugPrint('Connectivity error: $error'));
-
-      final List<ConnectivityResult> initialResult =
-          await _connectivity.checkConnectivity();
-      _isConnected = initialResult.any((r) => r != ConnectivityResult.none);
-
-      debugPrint('Initial connectivity (multi): $_isConnected');
+      final connectivityResult = await _connectivity.checkConnectivity();
+      _isConnected = connectivityResult != ConnectivityResult.none;
+      debugPrint('[LocationService] Initial connectivity state: ${_isConnected ? 'Connected' : 'Disconnected'}');
 
       await _checkAndMonitorServiceStatus();
+      debugPrint('[LocationService] Service initialization complete');
     } catch (error) {
-      debugPrint('Service initialization error: $error');
+      debugPrint('[LocationService] Service initialization error: $error');
       await _logErrorToServer(
-        errorType: 'ConnectivityError',
+        errorType: 'ServiceInitError',
         errorMessage: error.toString(),
         context: 'LocationService._initializeService',
       );
@@ -192,75 +223,118 @@ class LocationService {
   }
 
   Future<void> _checkAndMonitorServiceStatus() async {
-    _serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!_serviceEnabled && _isTracking) {
-      debugPrint('Location service disabled while tracking');
-      await stopTracking();
-    }
-
-    _serviceStatusStream = Geolocator.getServiceStatusStream().listen((status) {
-      _serviceEnabled = status == ServiceStatus.enabled;
+    try {
+      _serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      debugPrint('[LocationService] Location service status: ${_serviceEnabled ? 'Enabled' : 'Disabled'}');
+      
       if (!_serviceEnabled && _isTracking) {
-        debugPrint('Location service disabled while tracking');
-        stopTracking();
+        debugPrint('[LocationService] Location service disabled while tracking - stopping tracking');
+        await stopTracking();
       }
-    });
+
+      _serviceStatusStream = Geolocator.getServiceStatusStream().listen((status) {
+        _serviceEnabled = status == ServiceStatus.enabled;
+        debugPrint('[LocationService] Location service status changed: ${_serviceEnabled ? 'Enabled' : 'Disabled'}');
+        
+        if (!_serviceEnabled && _isTracking) {
+          debugPrint('[LocationService] Location service disabled while tracking - stopping tracking');
+          stopTracking();
+        }
+      }, onError: (e) => debugPrint('[LocationService] Service status stream error: $e'));
+    } catch (e) {
+      debugPrint('[LocationService] Error checking service status: $e');
+      await _logErrorToServer(
+        errorType: 'ServiceStatusError',
+        errorMessage: e.toString(),
+        context: 'LocationService._checkAndMonitorServiceStatus',
+      );
+    }
   }
 
   // Background Service Management
   Future<void> _setupBackgroundService() async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid) {
+      debugPrint('[LocationService] Background service setup skipped (not Android)');
+      return;
+    }
 
-    await Workmanager().initialize(
-      _backgroundTaskCallback,
-      isInDebugMode: kDebugMode,
-    );
+    try {
+      debugPrint('[LocationService] Setting up background service...');
+      
+      await Workmanager().initialize(
+        _backgroundTaskCallback,
+        isInDebugMode: kDebugMode,
+      );
+      debugPrint('[LocationService] Workmanager initialized');
 
-    final service = FlutterBackgroundService();
-    await service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: _onBackgroundServiceStart,
-        autoStart: false,
-        isForegroundMode: true,
-        notificationChannelId: 'location_tracker',
-        initialNotificationTitle: 'Location Tracking',
-        initialNotificationContent: 'Tracking your location in background',
-        foregroundServiceNotificationId: 888,
-        foregroundServiceTypes: [
-          AndroidForegroundType.location,
-          AndroidForegroundType.connectedDevice,
-        ],
-      ),
-      iosConfiguration: IosConfiguration(),
-    );
+      final service = FlutterBackgroundService();
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: _onBackgroundServiceStart,
+          autoStart: false,
+          isForegroundMode: true,
+          notificationChannelId: 'location_tracker',
+          initialNotificationTitle: 'Location Tracking',
+          initialNotificationContent: 'Tracking your location in background',
+          foregroundServiceNotificationId: 888,
+          foregroundServiceTypes: [
+            AndroidForegroundType.location,
+            AndroidForegroundType.connectedDevice,
+          ],
+        ),
+        iosConfiguration: IosConfiguration(),
+      );
+      debugPrint('[LocationService] Background service configured');
+    } catch (e) {
+      debugPrint('[LocationService] Background service setup error: $e');
+      await _logErrorToServer(
+        errorType: 'BackgroundServiceSetupError',
+        errorMessage: e.toString(),
+        context: 'LocationService._setupBackgroundService',
+      );
+    }
   }
 
   @pragma('vm:entry-point')
   static void _backgroundTaskCallback() {
+    debugPrint('[BackgroundTask] Background task triggered');
     Workmanager().executeTask((task, inputData) async {
-      final token = await SharedPrefHelper.getToken();
-      final dayLogId = await SharedPrefHelper.getActiveDayLogId();
-
-      if (token == null || dayLogId == null) return Future.value(false);
-
+      debugPrint('[BackgroundTask] Executing background task: $task');
+      
       try {
-        final position = await _getCurrentPositionWithTimeout();
-        if (!_isValidLocation(position)) return Future.value(false);
+        final token = await SharedPrefHelper.getToken();
+        final dayLogId = await SharedPrefHelper.getActiveDayLogId();
 
+        if (token == null || dayLogId == null) {
+          debugPrint('[BackgroundTask] No token or dayLogId available - aborting');
+          return Future.value(false);
+        }
+
+        debugPrint('[BackgroundTask] Getting current position...');
+        final position = await _getCurrentPositionWithTimeout();
+        
+        if (!_isValidLocation(position)) {
+          debugPrint('[BackgroundTask] Invalid location received - aborting');
+          return Future.value(false);
+        }
+
+        debugPrint('[BackgroundTask] Creating location payload...');
         final locationPayload = await _createLocationPayload(
           position,
           dayLogId,
           await Battery().batteryLevel,
         );
 
+        debugPrint('[BackgroundTask] Sending location to API...');
         final response = await _sendLocationToApiWithTimeout(
           token,
           locationPayload,
         );
 
+        debugPrint('[BackgroundTask] API response: ${response?.success}');
         return Future.value(response?.success ?? false);
       } catch (e) {
-        debugPrint('Background task error: $e');
+        debugPrint('[BackgroundTask] Error during execution: $e');
         return Future.value(false);
       }
     });
@@ -268,29 +342,41 @@ class LocationService {
 
   @pragma('vm:entry-point')
   static Future<void> _onBackgroundServiceStart(ServiceInstance service) async {
+    debugPrint('[BackgroundService] Service started');
+    
     if (service is AndroidServiceInstance) {
+      debugPrint('[BackgroundService] Setting as foreground service');
       service.setAsForegroundService();
-      service.on('stopService').listen((event) => service.stopSelf());
+      service.on('stopService').listen((event) {
+        debugPrint('[BackgroundService] Stop service command received');
+        service.stopSelf();
+      });
     }
 
     final token = await SharedPrefHelper.getToken();
     final dayLogId = await SharedPrefHelper.getActiveDayLogId();
 
     if (token == null || dayLogId == null) {
+      debugPrint('[BackgroundService] No token or dayLogId available - stopping service');
       service.stopSelf();
       return;
     }
 
+    debugPrint('[BackgroundService] Starting background location updates');
     await _sendLocationInBackground(service, token, dayLogId);
 
     Timer.periodic(const Duration(seconds: _backgroundInterval), (timer) async {
+      debugPrint('[BackgroundService] Periodic update triggered');
+      
       if (service is AndroidServiceInstance &&
           await service.isForegroundService()) {
+        debugPrint('[BackgroundService] Updating foreground notification');
         service.setForegroundNotificationInfo(
           title: "Location Tracker",
           content: "Last update: ${DateTime.now()}",
         );
       }
+      
       await _sendLocationInBackground(service, token, dayLogId);
     });
   }
@@ -301,29 +387,38 @@ class LocationService {
     String token,
     String dayLogId,
   ) async {
+    debugPrint('[BackgroundService] Sending location in background');
+    
     try {
+      debugPrint('[BackgroundService] Getting current position...');
       final position = await _getCurrentPositionWithTimeout();
-      if (!_isValidLocation(position)) return;
+      
+      if (!_isValidLocation(position)) {
+        debugPrint('[BackgroundService] Invalid location received - skipping');
+        return;
+      }
 
+      debugPrint('[BackgroundService] Creating location payload...');
       final locationPayload = await _createLocationPayload(
         position,
         dayLogId,
         await Battery().batteryLevel,
       );
 
+      debugPrint('[BackgroundService] Sending location to API...');
       final response = await _sendLocationToApiWithTimeout(
         token,
         locationPayload,
       );
 
       if (response?.success != true) {
-        debugPrint(
-          'Background service API response indicates failure - stopping',
-        );
+        debugPrint('[BackgroundService] API response indicates failure - stopping service');
         service.stopSelf();
+      } else {
+        debugPrint('[BackgroundService] Location sent successfully');
       }
     } catch (e) {
-      debugPrint('Background location error: $e');
+      debugPrint('[BackgroundService] Error sending location: $e');
     }
   }
 
@@ -332,32 +427,45 @@ class LocationService {
     required String token,
     required String dayLogId,
   }) async {
+    debugPrint('[LocationService] Start tracking requested');
+    
     if (_isTracking) {
-      debugPrint('Tracking already active');
+      debugPrint('[LocationService] Tracking already active');
       return true;
     }
 
     _currentToken = token;
     _currentDayLogId = dayLogId;
+    debugPrint('[LocationService] Set current token and dayLogId');
 
-    if (!await _checkLocationServices()) return false;
-    if (!await _checkLocationPermissions()) return false;
+    if (!await _checkLocationServices()) {
+      debugPrint('[LocationService] Location services check failed');
+      return false;
+    }
+    
+    if (!await _checkLocationPermissions()) {
+      debugPrint('[LocationService] Location permissions check failed');
+      return false;
+    }
 
     _isTracking = true;
+    debugPrint('[LocationService] Tracking started');
+    
     await _syncStoredLocations();
-    // await _sendCurrentLocation();
-    // _startPeriodicLocationUpdates();
 
     _positionStream?.cancel();
+    debugPrint('[LocationService] Starting position stream...');
+    
     _positionStream = Geolocator.getPositionStream(
       locationSettings: LocationSettings(
-        accuracy:
-            _isInBackground
-                ? LocationAccuracy.bestForNavigation
-                : LocationAccuracy.high,
+        accuracy: _isInBackground 
+            ? LocationAccuracy.bestForNavigation 
+            : LocationAccuracy.high,
         distanceFilter: 10,
       ),
     ).listen((Position position) {
+      debugPrint('[LocationService] New position received: ${position.latitude}, ${position.longitude}');
+      
       if (_isValidLocation(position)) {
         _sendLocationToAPI(
           _currentToken!,
@@ -365,24 +473,33 @@ class LocationService {
           position.latitude,
           position.longitude,
         );
+      } else {
+        debugPrint('[LocationService] Position not valid - skipping');
       }
-    }, onError: (e) => debugPrint('Position update error: $e'));
+    }, onError: (e) => debugPrint('[LocationService] Position update error: $e'));
 
-    if (_isInBackground) _positionStream?.pause();
+    if (_isInBackground) {
+      debugPrint('[LocationService] App is in background - pausing position stream');
+      _positionStream?.pause();
+    }
+    
     return true;
   }
 
-  // Modify your stopTracking method to include this sync
   Future<void> stopTracking() async {
-    if (!_isTracking) return;
+    if (!_isTracking) {
+      debugPrint('[LocationService] Not tracking - nothing to stop');
+      return;
+    }
 
-    debugPrint('Stopping tracking service...');
+    debugPrint('[LocationService] Stopping tracking service...');
 
-    // Ensure no simultaneous access to the DB
+    // First attempt to sync all remaining locations
     await syncAllUnsyncedLocationsBeforeClosing();
 
     await _positionStream?.cancel();
     _positionStream = null;
+    debugPrint('[LocationService] Position stream cancelled');
 
     _isTracking = false;
     _currentToken = null;
@@ -390,36 +507,51 @@ class LocationService {
     _lastSentLatitude = null;
     _lastSentLongitude = null;
     _lastLocationSentTime = null;
+    debugPrint('[LocationService] Tracking state reset');
 
     try {
       if (Platform.isAndroid) {
+        debugPrint('[LocationService] Stopping Android background services');
         final service = FlutterBackgroundService();
         if (await service.isRunning()) {
+          debugPrint('[LocationService] Invoking stopService command');
           service.invoke('stopService');
           await Future.delayed(const Duration(seconds: 1));
         }
+        
+        debugPrint('[LocationService] Cancelling all workmanager tasks');
         await Workmanager().cancelAll();
         await Workmanager().cancelByUniqueName(_backgroundTaskName);
       }
     } catch (e) {
-      debugPrint('Error stopping services: $e');
+      debugPrint('[LocationService] Error stopping services: $e');
+      await _logErrorToServer(
+        errorType: 'ServiceStopError',
+        errorMessage: e.toString(),
+        context: 'LocationService.stopTracking',
+      );
     }
-
-    // 💡 Now safe to close DB
-    await _locationDatabase?.close();
-    _locationDatabase = null;
+    
+    debugPrint('[LocationService] Tracking stopped successfully');
   }
 
   // Helper Methods
   Future<void> _sendCurrentLocation() async {
     if (!_isTracking || _currentToken == null || _currentDayLogId == null) {
+      debugPrint('[LocationService] Not tracking or missing credentials - skipping location send');
       return;
     }
 
     try {
+      debugPrint('[LocationService] Getting current position...');
       final position = await _getCurrentPositionWithTimeout();
-      if (!_isValidLocation(position)) return;
+      
+      if (!_isValidLocation(position)) {
+        debugPrint('[LocationService] Invalid position received - skipping');
+        return;
+      }
 
+      debugPrint('[LocationService] Sending location to API...');
       await _sendLocationToAPI(
         _currentToken!,
         _currentDayLogId!,
@@ -427,22 +559,30 @@ class LocationService {
         position.longitude,
       );
     } on TimeoutException {
-      debugPrint('Location acquisition timeout');
+      debugPrint('[LocationService] Location acquisition timeout');
     } catch (e) {
-      debugPrint('Error getting location: $e');
+      debugPrint('[LocationService] Error getting location: $e');
+      await _logErrorToServer(
+        errorType: 'LocationAcquisitionError',
+        errorMessage: e.toString(),
+        context: 'LocationService._sendCurrentLocation',
+      );
     }
   }
 
   static Future<Position> _getCurrentPositionWithTimeout() async {
+    debugPrint('[LocationService] Getting current position with timeout');
     final locationSettings = _getPlatformSpecificSettings();
     final position = await Geolocator.getCurrentPosition(
       locationSettings: locationSettings,
     ).timeout(const Duration(seconds: 15));
 
+    debugPrint('[LocationService] Position acquired: ${position.latitude}, ${position.longitude}');
     return position;
   }
 
   static LocationSettings _getPlatformSpecificSettings() {
+    debugPrint('[LocationService] Getting platform-specific location settings');
     if (Platform.isAndroid) {
       return _getAndroidSettings();
     } else {
@@ -451,25 +591,26 @@ class LocationService {
   }
 
   static AndroidSettings _getAndroidSettings() {
+    debugPrint('[LocationService] Creating Android-specific location settings');
     return AndroidSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: _isInBackground ? 20 : 10, // meters
       forceLocationManager: false, // Use FusedLocationProvider
       intervalDuration: const Duration(seconds: 10),
       timeLimit: const Duration(seconds: 12), // Shorter than overall timeout
-      foregroundNotificationConfig:
-          _isInBackground
-              ? const ForegroundNotificationConfig(
-                notificationText: "Tracking your location in background",
-                notificationTitle: "Location Tracker",
-                enableWakeLock: true,
-              )
-              : null,
+      foregroundNotificationConfig: _isInBackground
+          ? const ForegroundNotificationConfig(
+              notificationText: "Tracking your location in background",
+              notificationTitle: "Location Tracker",
+              enableWakeLock: true,
+            )
+          : null,
       useMSLAltitude: true, // Use mean sea level altitude if available
     );
   }
 
   static AppleSettings _getAppleSettings() {
+    debugPrint('[LocationService] Creating iOS-specific location settings');
     return AppleSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: _isInBackground ? 20 : 10, // meters
@@ -486,38 +627,49 @@ class LocationService {
     String dayLogId,
     int? batteryLevel,
   ) async {
+    debugPrint('[LocationService] Creating location payload');
     final gpsStatus = await _getGpsStatusGeolocator();
-    return {
+    final payload = {
       "trip_id": dayLogId,
       "latitude": position.latitude,
       "longitude": position.longitude,
       "gps_status": "${gpsStatus.value}",
       if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
     };
+    
+    debugPrint('[LocationService] Payload created: $payload');
+    return payload;
   }
 
   static Future<GpsStatus> _getGpsStatusGeolocator() async {
     try {
+      debugPrint('[LocationService] Checking GPS status');
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return GpsStatus.disabled;
+      if (!serviceEnabled) {
+        debugPrint('[LocationService] GPS status: Disabled');
+        return GpsStatus.disabled;
+      }
 
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        debugPrint('[LocationService] GPS status: Unavailable (permission denied)');
         return GpsStatus.unavailable;
       }
 
+      debugPrint('[LocationService] GPS status: Enabled');
       return GpsStatus.enabled;
     } catch (e) {
+      debugPrint('[LocationService] Error getting GPS status: $e');
       return GpsStatus.unavailable;
     }
   }
 
-  static Future<DayLogStoreLocationResponseModel?>
-  _sendLocationToApiWithTimeout(
+  static Future<DayLogStoreLocationResponseModel?> _sendLocationToApiWithTimeout(
     String token,
     Map<String, dynamic> payload,
   ) async {
+    debugPrint('[LocationService] Sending location to API with timeout');
     return await BasicService()
         .postDayLogLocations(token, payload)
         .timeout(const Duration(seconds: 10));
@@ -525,31 +677,35 @@ class LocationService {
 
   static bool _isValidLocation(Position position) {
     if (position.accuracy > 100) {
-      debugPrint('Location accuracy too low: ${position.accuracy} meters');
+      debugPrint('[LocationService] Location accuracy too low: ${position.accuracy} meters');
       return false;
     }
 
     if (DateTime.now().difference(position.timestamp) > Duration(minutes: 5)) {
-      debugPrint('Location timestamp too old: ${position.timestamp}');
+      debugPrint('[LocationService] Location timestamp too old: ${position.timestamp}');
       return false;
     }
 
+    debugPrint('[LocationService] Location is valid');
     return true;
   }
 
   // App Lifecycle
   Future<void> _setupAppLifecycle() async {
+    debugPrint('[LocationService] Setting up app lifecycle handlers');
     SystemChannels.lifecycle.setMessageHandler((msg) async {
-      debugPrint('AppLifecycleState: $msg');
+      debugPrint('[AppLifecycle] State changed: $msg');
 
       switch (msg) {
         case 'AppLifecycleState.inactive':
         case 'AppLifecycleState.paused':
           _isInBackground = true;
+          debugPrint('[AppLifecycle] App moved to background');
           _handleAppBackground();
           break;
         case 'AppLifecycleState.resumed':
           _isInBackground = false;
+          debugPrint('[AppLifecycle] App moved to foreground');
           _handleAppForegrounded();
           break;
       }
@@ -558,18 +714,23 @@ class LocationService {
   }
 
   void _handleAppBackground() async {
-    if (!_isTracking) return;
-    debugPrint('App moved to background - adjusting location tracking');
+    if (!_isTracking) {
+      debugPrint('[AppLifecycle] Not tracking - skipping background handling');
+      return;
+    }
+    
+    debugPrint('[AppLifecycle] Adjusting location tracking for background');
 
     try {
-      // await _platform.invokeMethod('startBackgroundService');
-
       if (Platform.isAndroid) {
+        debugPrint('[AppLifecycle] Starting Android background service');
         final service = FlutterBackgroundService();
         await service.startService();
+        
+        debugPrint('[AppLifecycle] Pausing position stream');
         _positionStream?.pause();
-        // _locationTimer?.cancel();
 
+        debugPrint('[AppLifecycle] Registering periodic workmanager task');
         await Workmanager().registerPeriodicTask(
           '1',
           _backgroundTaskName,
@@ -583,20 +744,30 @@ class LocationService {
             requiresStorageNotLow: false,
           ),
         );
+        
         await _optimizeForBattery();
       }
     } catch (e) {
-      debugPrint('Error starting background service: $e');
+      debugPrint('[AppLifecycle] Error handling background transition: $e');
+      await _logErrorToServer(
+        errorType: 'BackgroundTransitionError',
+        errorMessage: e.toString(),
+        context: 'LocationService._handleAppBackground',
+      );
     }
   }
 
-  // Enhance _handleAppForegrounded to force sync unsynced locations
   void _handleAppForegrounded() async {
-    if (!_isTracking) return;
-    debugPrint('App moved to foreground - adjusting location tracking');
+    if (!_isTracking) {
+      debugPrint('[AppLifecycle] Not tracking - skipping foreground handling');
+      return;
+    }
+    
+    debugPrint('[AppLifecycle] Adjusting location tracking for foreground');
 
     try {
       if (Platform.isAndroid) {
+        debugPrint('[AppLifecycle] Stopping Android background service');
         final service = FlutterBackgroundService();
         if (await service.isRunning()) {
           service.invoke('stopService');
@@ -604,7 +775,7 @@ class LocationService {
         }
       }
 
-      // Cancel and recreate the stream
+      debugPrint('[AppLifecycle] Recreating position stream');
       await _positionStream?.cancel();
       _positionStream = Geolocator.getPositionStream(
         locationSettings: LocationSettings(
@@ -613,6 +784,7 @@ class LocationService {
         ),
       ).listen(
         (Position position) {
+          debugPrint('[AppLifecycle] New position in foreground: ${position.latitude}, ${position.longitude}');
           if (_isValidLocation(position)) {
             _sendLocationToAPI(
               _currentToken!,
@@ -623,96 +795,120 @@ class LocationService {
           }
         },
         onError: (e) {
-          debugPrint('Position stream error on resume: $e');
+          debugPrint('[AppLifecycle] Position stream error on resume: $e');
         },
       );
 
+      debugPrint('[AppLifecycle] Forcing sync of stored locations');
       await _syncStoredLocations(force: true);
     } catch (e) {
-      debugPrint('Error stopping background service: $e');
+      debugPrint('[AppLifecycle] Error handling foreground transition: $e');
+      await _logErrorToServer(
+        errorType: 'ForegroundTransitionError',
+        errorMessage: e.toString(),
+        context: 'LocationService._handleAppForegrounded',
+      );
     }
   }
 
-  // // Other Methods
-  // Future<void> _startPeriodicLocationUpdates() async {
-  //   _locationTimer?.cancel();
-  //   await _optimizeForBattery();
-  //
-  //   _locationTimer = Timer.periodic(
-  //     Duration(
-  //       seconds: _isInBackground ? _backgroundInterval : _foregroundInterval,
-  //     ),
-  //     (_) => _sendCurrentLocation(),
-  //   );
-  // }
-
   Future<bool> _checkLocationServices() async {
     try {
+      debugPrint('[LocationService] Checking location services status');
       _serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!_serviceEnabled) debugPrint('Location services disabled by user');
-      return _serviceEnabled;
+      
+      if (!_serviceEnabled) {
+        debugPrint('[LocationService] Location services disabled by user');
+        return false;
+      }
+      
+      debugPrint('[LocationService] Location services enabled');
+      return true;
     } catch (e) {
-      debugPrint('Location service check failed: $e');
+      debugPrint('[LocationService] Location service check failed: $e');
+      await _logErrorToServer(
+        errorType: 'LocationServiceCheckError',
+        errorMessage: e.toString(),
+        context: 'LocationService._checkLocationServices',
+      );
       return false;
     }
   }
 
   Future<bool> _checkLocationPermissions() async {
     try {
+      debugPrint('[LocationService] Checking location permissions');
       _permissionStatus = await Geolocator.checkPermission();
+      
       if (_permissionStatus == LocationPermission.denied ||
           _permissionStatus == LocationPermission.deniedForever) {
+        debugPrint('[LocationService] Location permission denied - requesting');
         _permissionStatus = await Geolocator.requestPermission();
       }
 
       if (_permissionStatus == LocationPermission.denied ||
           _permissionStatus == LocationPermission.deniedForever) {
-        debugPrint('Location permission denied');
+        debugPrint('[LocationService] Location permission denied after request');
         return false;
       }
 
+      debugPrint('[LocationService] Location permission granted');
       return true;
     } catch (e) {
-      debugPrint('Location permission check failed: $e');
+      debugPrint('[LocationService] Location permission check failed: $e');
+      await _logErrorToServer(
+        errorType: 'LocationPermissionError',
+        errorMessage: e.toString(),
+        context: 'LocationService._checkLocationPermissions',
+      );
       return false;
     }
   }
 
   Future<void> _optimizeForBattery() async {
     try {
+      debugPrint('[LocationService] Checking battery level for optimization');
       final level = await _battery.batteryLevel;
+      debugPrint('[LocationService] Current battery level: $level%');
+      
       if (level < 15) {
-        debugPrint(
-          'Low battery ($level%) - reducing location update frequency',
-        );
-        // _locationTimer?.cancel();
-        // _locationTimer = Timer.periodic(
-        //   Duration(seconds: _isInBackground ? 180 : 90),
-        //   (_) => _sendCurrentLocation(),
-        // );
+        debugPrint('[LocationService] Low battery ($level%) - reducing location update frequency');
+        // Implementation would go here
       }
     } catch (e) {
-      debugPrint('Error checking battery level: $e');
+      debugPrint('[LocationService] Error checking battery level: $e');
+      await _logErrorToServer(
+        errorType: 'BatteryCheckError',
+        errorMessage: e.toString(),
+        context: 'LocationService._optimizeForBattery',
+      );
     }
   }
 
   Future<void> dispose() async {
+    debugPrint('[LocationService] Disposing service...');
     await stopTracking();
+    
+    debugPrint('[LocationService] Cancelling subscriptions');
     await _connectivitySubscription?.cancel();
     await _positionStream?.cancel();
     await _serviceStatusStream?.cancel();
 
     if (Platform.isAndroid) {
+      debugPrint('[LocationService] Stopping Android services');
       final service = FlutterBackgroundService();
       service.invoke('stopService');
       Workmanager().cancelByTag('1');
     }
 
+    debugPrint('[LocationService] Closing database');
     await _locationDatabase?.close();
     _locationDatabase = null;
+    
+    debugPrint('[LocationService] Service disposed');
   }
 
   Future<bool> isServiceRunning() async {
+    debugPrint('[LocationService] Checking if service is running');
     bool isTrackingActive = _isTracking;
     bool isBackgroundServiceRunning = false;
 
@@ -720,31 +916,37 @@ class LocationService {
       try {
         final service = FlutterBackgroundService();
         isBackgroundServiceRunning = await service.isRunning();
+        debugPrint('[LocationService] Background service running: $isBackgroundServiceRunning');
       } catch (e) {
-        debugPrint('Error checking service status: $e');
+        debugPrint('[LocationService] Error checking service status: $e');
       }
     }
 
-    return isTrackingActive || isBackgroundServiceRunning;
+    final result = isTrackingActive || isBackgroundServiceRunning;
+    debugPrint('[LocationService] Service running status: $result');
+    return result;
   }
 
-  // Modify _syncStoredLocations to accept force parameter
   Future<void> _syncStoredLocations({bool force = false}) async {
     if ((!_isConnected && !force) ||
         _currentToken == null ||
         _currentDayLogId == null) {
+      debugPrint('[LocationService] Sync conditions not met - skipping sync');
+      debugPrint('  - Connected: $_isConnected, Force: $force');
+      debugPrint('  - Token available: ${_currentToken != null}');
+      debugPrint('  - DayLogId available: ${_currentDayLogId != null}');
       return;
     }
 
-    final unsyncedLocations = await _getUnsyncedLocations(
-      int.tryParse(_currentDayLogId!) ?? 0,
-    );
-    if (unsyncedLocations.isEmpty) return;
+    debugPrint('[LocationService] Starting sync of stored locations');
+    final unsyncedLocations = await _getUnsyncedLocations();
+    
+    if (unsyncedLocations.isEmpty) {
+      debugPrint('[LocationService] No unsynced locations found');
+      return;
+    }
 
-    debugPrint(
-      'Found ${unsyncedLocations.length} unsynced locations - syncing',
-    );
-
+    debugPrint('[LocationService] Found ${unsyncedLocations.length} unsynced locations - syncing');
     final successfulIds = <int>[];
     const batchSize = 10;
     final batches = (unsyncedLocations.length / batchSize).ceil();
@@ -757,24 +959,26 @@ class LocationService {
         end > unsyncedLocations.length ? unsyncedLocations.length : end,
       );
 
+      debugPrint('[LocationService] Processing batch $i (${batch.length} locations)');
+      
       try {
         final responses = await Future.wait(
           batch.map((location) async {
-            final String formattedDate = DateFormat(
-              'yyyy-MM-dd HH:mm:ss',
-            ).format(
+            final String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(
               DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
             );
+            
             final payload = {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": "${location['gps_status']}",
+              "gps_status": location['gps_status'],
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,
             };
 
+            debugPrint('[LocationService] Sending location ${location['id']} to API');
             DayLogStoreLocationResponseModel? response = await BasicService()
                 .postDayLogLocations(_currentToken!, payload)
                 .timeout(_apiTimeout);
@@ -793,12 +997,13 @@ class LocationService {
         );
 
         if (responses.any((r) => !(r['success'] as bool))) {
+          debugPrint('[LocationService] Batch $i had failures - continuing');
           continue;
         }
       } catch (e) {
-        debugPrint('Error syncing batch $i: $e');
+        debugPrint('[LocationService] Error syncing batch $i: $e');
         await _logErrorToServer(
-          errorType: 'BatchSyncProcessingError',
+          errorType: 'BatchSyncError',
           errorMessage: e.toString(),
           context: 'LocationService._syncStoredLocations',
           additionalData: {'batch_index': i},
@@ -808,8 +1013,10 @@ class LocationService {
     }
 
     if (successfulIds.isNotEmpty) {
+      debugPrint('[LocationService] Marking ${successfulIds.length} locations as synced');
       await _markLocationsAsSynced(successfulIds);
-      debugPrint('Successfully synced ${successfulIds.length} locations');
+    } else {
+      debugPrint('[LocationService] No locations were successfully synced');
     }
   }
 
@@ -819,28 +1026,31 @@ class LocationService {
     double latitude,
     double longitude,
   ) async {
+    debugPrint('[LocationService] Preparing to send location to API');
+    
     // Check if location has changed significantly or enough time has passed
     final now = DateTime.now();
-    final hasMovedSignificantly =
-        _lastSentLatitude == null ||
+    final hasMovedSignificantly = _lastSentLatitude == null ||
         _lastSentLongitude == null ||
         (latitude - _lastSentLatitude!).abs() > _locationChangeThreshold ||
         (longitude - _lastSentLongitude!).abs() > _locationChangeThreshold;
 
-    final shouldSendDueToTime =
-        _lastLocationSentTime == null ||
+    final shouldSendDueToTime = _lastLocationSentTime == null ||
         now.difference(_lastLocationSentTime!) > _minLocationSendInterval;
 
     if (!hasMovedSignificantly && !shouldSendDueToTime) {
-      debugPrint('Location unchanged - skipping API call');
+      debugPrint('[LocationService] Location unchanged - skipping API call');
+      debugPrint('  - Moved significantly: $hasMovedSignificantly');
+      debugPrint('  - Time elapsed: ${_lastLocationSentTime != null ? now.difference(_lastLocationSentTime!).inSeconds : 'N/A'}s');
       return;
     }
 
     int? batteryLevel;
     try {
+      debugPrint('[LocationService] Getting battery level');
       batteryLevel = await _battery.batteryLevel;
     } catch (e) {
-      debugPrint('Error getting battery level: $e');
+      debugPrint('[LocationService] Error getting battery level: $e');
       await _logErrorToServer(
         errorType: 'BatteryLevelError',
         errorMessage: e.toString(),
@@ -858,21 +1068,22 @@ class LocationService {
       if (batteryLevel != null) "battery_percentage": "$batteryLevel",
     };
 
-    await _saveLocationToDatabase(locationPayload, dayLogId);
+    debugPrint('[LocationService] Saving location to database');
+    await _saveLocationToDatabase(locationPayload);
 
     // Update last sent location info
     _lastSentLatitude = latitude;
     _lastSentLongitude = longitude;
     _lastLocationSentTime = now;
+    debugPrint('[LocationService] Updated last sent location info');
 
     if (!_isConnected) {
-      debugPrint(
-        'Offline - location saved to database (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
+      debugPrint('[LocationService] Offline - location saved to database (Battery: ${batteryLevel ?? 'N/A'}%)');
       return;
     }
 
     try {
+      debugPrint('[LocationService] Sending location to API');
       final response = await BasicService()
           .postDayLogLocations(token, locationPayload)
           .timeout(_apiTimeout);
@@ -881,7 +1092,11 @@ class LocationService {
           response.success == false ||
           response.errors != null ||
           response.data == null) {
-        debugPrint('API response indicates failure');
+        debugPrint('[LocationService] API response indicates failure');
+        debugPrint('  - Success: ${response?.success}');
+        debugPrint('  - Errors: ${response?.errors}');
+        debugPrint('  - Data: ${response?.data}');
+        
         await _logErrorToServer(
           errorType: 'LocationApiFailure',
           errorMessage: response?.errors?.toString() ?? 'Unknown API failure',
@@ -899,16 +1114,14 @@ class LocationService {
       );
       if (lastInsertId != null && lastInsertId.isNotEmpty) {
         final id = lastInsertId.first.values.first as int;
+        debugPrint('[LocationService] Marking location $id as synced');
         await _markLocationsAsSynced([id]);
       }
 
-      debugPrint(
-        'Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
-
+      debugPrint('[LocationService] Location sent successfully (Battery: ${batteryLevel ?? 'N/A'}%)');
       await _syncStoredLocations();
     } catch (e) {
-      debugPrint('API error: $e (Battery: ${batteryLevel ?? 'N/A'}%)');
+      debugPrint('[LocationService] API error: $e (Battery: ${batteryLevel ?? 'N/A'}%)');
       await _logErrorToServer(
         errorType: 'LocationApiError',
         errorMessage: e.toString(),
@@ -920,17 +1133,23 @@ class LocationService {
 
   Future<GpsStatus> _getGpsStatus() async {
     try {
+      debugPrint('[LocationService] Getting GPS status');
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return GpsStatus.disabled;
+      if (!serviceEnabled) {
+        debugPrint('[LocationService] GPS status: Disabled');
+        return GpsStatus.disabled;
+      }
 
       if (_permissionStatus == LocationPermission.denied ||
           _permissionStatus == LocationPermission.deniedForever) {
+        debugPrint('[LocationService] GPS status: Unavailable (permission denied)');
         return GpsStatus.unavailable;
       }
 
+      debugPrint('[LocationService] GPS status: ${_isTracking ? 'Searching' : 'Enabled'}');
       return _isTracking ? GpsStatus.searching : GpsStatus.enabled;
     } catch (e) {
-      debugPrint('Error getting GPS status: $e');
+      debugPrint('[LocationService] Error getting GPS status: $e');
       await _logErrorToServer(
         errorType: 'GpsStatusError',
         errorMessage: e.toString(),
@@ -940,7 +1159,6 @@ class LocationService {
     }
   }
 
-  // Add this method to handle error logging
   Future<void> _logErrorToServer({
     required String errorType,
     required String errorMessage,
@@ -948,8 +1166,12 @@ class LocationService {
     String? stackTrace,
     Map<String, dynamic>? additionalData,
   }) async {
-    if (_currentToken == null) return;
+    if (_currentToken == null) {
+      debugPrint('[ErrorLogging] No token available - cannot log error');
+      return;
+    }
 
+    debugPrint('[ErrorLogging] Preparing to log error: $errorType');
     final errorPayload = {
       'error_type': errorType,
       'error_message': errorMessage,
@@ -971,22 +1193,26 @@ class LocationService {
 
     for (int attempt = 1; attempt <= _maxErrorRetryAttempts; attempt++) {
       try {
+        debugPrint('[ErrorLogging] Attempt $attempt to log error');
         final Map<String, String> formData = {
           "connection": "mobile",
           "queue": "default",
           "payload": jsonEncode(errorPayload),
           "exception": errorType,
         };
+        
         final response = await BasicService()
             .postFailedJob(formData)
             .timeout(const Duration(seconds: 10));
 
         if (response?.success == true) {
-          debugPrint('Error logged successfully (attempt $attempt)');
+          debugPrint('[ErrorLogging] Error logged successfully (attempt $attempt)');
           return;
+        } else {
+          debugPrint('[ErrorLogging] Error logging failed (attempt $attempt)');
         }
       } catch (e) {
-        debugPrint('Failed to log error (attempt $attempt): $e');
+        debugPrint('[ErrorLogging] Failed to log error (attempt $attempt): $e');
       }
 
       if (attempt < _maxErrorRetryAttempts) {
@@ -994,30 +1220,25 @@ class LocationService {
       }
     }
 
-    debugPrint('All attempts to log error failed');
+    debugPrint('[ErrorLogging] All attempts to log error failed');
   }
 
-  // Add this method to your LocationService class
   Future<void> syncAllUnsyncedLocationsBeforeClosing() async {
     if (_currentToken == null || _currentDayLogId == null) {
-      debugPrint('No active trip - nothing to sync');
+      debugPrint('[FinalSync] No active trip - nothing to sync');
       return;
     }
 
-    debugPrint(
-      'Starting final sync of all unsynced locations before closing trip',
-    );
+    debugPrint('[FinalSync] Starting final sync of all unsynced locations before closing trip');
 
     // Get all unsynced locations
-    final unsyncedLocations = await _getUnsyncedLocations(
-      int.tryParse(_currentDayLogId!) ?? 0,
-    );
+    final unsyncedLocations = await _getUnsyncedLocations();
     if (unsyncedLocations.isEmpty) {
-      debugPrint('No unsynced locations found');
+      debugPrint('[FinalSync] No unsynced locations found');
       return;
     }
 
-    debugPrint('Found ${unsyncedLocations.length} unsynced locations to sync');
+    debugPrint('[FinalSync] Found ${unsyncedLocations.length} unsynced locations to sync');
 
     final successfulIds = <int>[];
     const batchSize = 5; // Smaller batch size for more reliable final sync
@@ -1031,25 +1252,27 @@ class LocationService {
         end > unsyncedLocations.length ? unsyncedLocations.length : end,
       );
 
+      debugPrint('[FinalSync] Processing final batch $i (${batch.length} locations)');
+      
       try {
         // Use longer timeout for final sync attempts
         final responses = await Future.wait(
           batch.map((location) async {
-            final String formattedDate = DateFormat(
-              'yyyy-MM-dd HH:mm:ss',
-            ).format(
+            final String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(
               DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
             );
+            
             final payload = {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": "${location['gps_status']}",
+              "gps_status": location['gps_status'],
               if (location['battery_level'] != null)
                 "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,
             };
 
+            debugPrint('[FinalSync] Sending location ${location['id']} to API');
             final response = await BasicService()
                 .postDayLogLocations(_currentToken!, payload)
                 .timeout(const Duration(seconds: 30)); // Extended timeout
@@ -1068,12 +1291,12 @@ class LocationService {
         );
 
         // If any in batch failed, stop and preserve remaining for next attempt
-        if (responses.any((r) => !(r['success'] as bool))) {
-          debugPrint('Batch $i had failures - stopping final sync');
+        if (responses.any((r) => !(r['success'] as bool)) {
+          debugPrint('[FinalSync] Batch $i had failures - stopping final sync');
           continue;
         }
       } catch (e) {
-        debugPrint('Error syncing final batch $i: $e');
+        debugPrint('[FinalSync] Error syncing final batch $i: $e');
         await _logErrorToServer(
           errorType: 'FinalSyncError',
           errorMessage: e.toString(),
@@ -1085,18 +1308,14 @@ class LocationService {
     }
 
     if (successfulIds.isNotEmpty) {
+      debugPrint('[FinalSync] Marking ${successfulIds.length} locations as synced');
       await _markLocationsAsSynced(successfulIds);
-      debugPrint(
-        'Successfully synced ${successfulIds.length} locations in final attempt',
-      );
     }
 
     // Log how many locations remain unsynced
     final remainingUnsynced = unsyncedLocations.length - successfulIds.length;
     if (remainingUnsynced > 0) {
-      debugPrint(
-        'Warning: $remainingUnsynced locations remain unsynced after final attempt',
-      );
+      debugPrint('[FinalSync] Warning: $remainingUnsynced locations remain unsynced after final attempt');
       await _logErrorToServer(
         errorType: 'RemainingUnsyncedLocations',
         errorMessage: '$remainingUnsynced locations could not be synced',
