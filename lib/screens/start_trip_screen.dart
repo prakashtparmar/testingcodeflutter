@@ -320,11 +320,18 @@ class _StartTripScreenState extends State<StartTripScreen> {
             "locationService.isTracking ${locationService.isTracking}",
           );
         } else {
-          bool started = await locationService.startTracking(
+          await SharedPrefHelper.saveActiveDayLogId(
+            postDayLogsResponseModel.data!.id.toString(),
+          );
+          bool success = await locationService.startTracking(
             token: tokenData,
             dayLogId: "${postDayLogsResponseModel.data!.id}",
           );
-          debugPrint("started $started");
+          if (success) {
+            debugPrint('Location tracking started successfully');
+          } else {
+            debugPrint('Failed to start tracking - check permissions');
+          }
         }
 
         Navigator.pop(context, true); // Sends 'true' back to the caller
