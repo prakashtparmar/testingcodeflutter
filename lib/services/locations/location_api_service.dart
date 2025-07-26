@@ -8,19 +8,18 @@ class LocationApiService {
     double latitude,
     double longitude,
     int? batteryLevel,
+    String gpsStatus,
   ) async {
     try {
       final payload = {
         "trip_id": dayLogId,
         "latitude": latitude,
         "longitude": longitude,
-        "gps_status": "1", // Assuming enabled
-        if (batteryLevel != null) "battery_percentage": "$batteryLevel",
+        "gps_status": gpsStatus,
+        "battery_percentage": "$batteryLevel",
       };
 
-      return await BasicService()
-          .postDayLogLocations(token, payload)
-          .timeout(const Duration(seconds: 15));
+      return await BasicService().postDayLogLocations(token, payload);
     } catch (e) {
       return null;
     }

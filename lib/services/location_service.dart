@@ -52,7 +52,6 @@ class LocationService {
 
   static const int _foregroundInterval = 10;
   static const int _backgroundInterval = 10;
-  static const Duration _apiTimeout = Duration(seconds: 15);
   static const String _backgroundTaskName = 'locationBackgroundTask';
   static const String _locationDatabaseName = 'locations.db';
 
@@ -109,11 +108,6 @@ class LocationService {
       debugPrint('[LocationService] Database initialized successfully');
     } catch (e) {
       debugPrint('[LocationService] Database initialization error: $e');
-      await _logErrorToServer(
-        errorType: 'DatabaseInitError',
-        errorMessage: e.toString(),
-        context: 'LocationService._initDatabase',
-      );
     }
   }
 
@@ -140,12 +134,6 @@ class LocationService {
       debugPrint('[LocationService] Location saved to database with id: $id');
     } catch (e) {
       debugPrint('[LocationService] Error saving location to database: $e');
-      await _logErrorToServer(
-        errorType: 'DatabaseSaveError',
-        errorMessage: e.toString(),
-        context: 'LocationService._saveLocationToDatabase',
-        additionalData: {'location_data': location},
-      );
     }
   }
 
@@ -170,11 +158,7 @@ class LocationService {
       return locations;
     } catch (e) {
       debugPrint('[LocationService] Error getting unsynced locations: $e');
-      await _logErrorToServer(
-        errorType: 'DatabaseQueryError',
-        errorMessage: e.toString(),
-        context: 'LocationService._getUnsyncedLocations',
-      );
+
       return [];
     }
   }
@@ -197,12 +181,6 @@ class LocationService {
       debugPrint('[LocationService] Successfully marked locations as synced');
     } catch (e) {
       debugPrint('[LocationService] Error marking locations as synced: $e');
-      await _logErrorToServer(
-        errorType: 'DatabaseSyncError',
-        errorMessage: e.toString(),
-        context: 'LocationService._markLocationsAsSynced',
-        additionalData: {'ids': ids},
-      );
     }
   }
 
@@ -239,11 +217,6 @@ class LocationService {
       debugPrint('[LocationService] Service initialization complete');
     } catch (error) {
       debugPrint('[LocationService] Service initialization error: $error');
-      await _logErrorToServer(
-        errorType: 'ServiceInitError',
-        errorMessage: error.toString(),
-        context: 'LocationService._initializeService',
-      );
     }
   }
 
@@ -281,11 +254,6 @@ class LocationService {
       );
     } catch (e) {
       debugPrint('[LocationService] Error checking service status: $e');
-      await _logErrorToServer(
-        errorType: 'ServiceStatusError',
-        errorMessage: e.toString(),
-        context: 'LocationService._checkAndMonitorServiceStatus',
-      );
     }
   }
 
@@ -327,11 +295,6 @@ class LocationService {
       debugPrint('[LocationService] Background service configured');
     } catch (e) {
       debugPrint('[LocationService] Background service setup error: $e');
-      await _logErrorToServer(
-        errorType: 'BackgroundServiceSetupError',
-        errorMessage: e.toString(),
-        context: 'LocationService._setupBackgroundService',
-      );
     }
   }
 
@@ -576,11 +539,6 @@ class LocationService {
       }
     } catch (e) {
       debugPrint('[LocationService] Error stopping services: $e');
-      await _logErrorToServer(
-        errorType: 'ServiceStopError',
-        errorMessage: e.toString(),
-        context: 'LocationService.stopTracking',
-      );
     }
 
     debugPrint('[LocationService] Tracking stopped successfully');
@@ -615,11 +573,6 @@ class LocationService {
       debugPrint('[LocationService] Location acquisition timeout');
     } catch (e) {
       debugPrint('[LocationService] Error getting location: $e');
-      await _logErrorToServer(
-        errorType: 'LocationAcquisitionError',
-        errorMessage: e.toString(),
-        context: 'LocationService._sendCurrentLocation',
-      );
     }
   }
 
@@ -690,7 +643,7 @@ class LocationService {
       "latitude": position.latitude,
       "longitude": position.longitude,
       "gps_status": "${gpsStatus.value}",
-      if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
+      "battery_percentage": "$batteryLevel",
     };
 
     debugPrint('[LocationService] Payload created: $payload');
@@ -729,9 +682,7 @@ class LocationService {
     Map<String, dynamic> payload,
   ) async {
     debugPrint('[LocationService] Sending location to API with timeout');
-    return await BasicService()
-        .postDayLogLocations(token, payload)
-        .timeout(const Duration(seconds: 10));
+    return await BasicService().postDayLogLocations(token, payload);
   }
 
   static bool _isValidLocation(Position position) {
@@ -812,11 +763,6 @@ class LocationService {
       }
     } catch (e) {
       debugPrint('[AppLifecycle] Error handling background transition: $e');
-      await _logErrorToServer(
-        errorType: 'BackgroundTransitionError',
-        errorMessage: e.toString(),
-        context: 'LocationService._handleAppBackground',
-      );
     }
   }
 
@@ -868,11 +814,6 @@ class LocationService {
       await _syncStoredLocations(force: true);
     } catch (e) {
       debugPrint('[AppLifecycle] Error handling foreground transition: $e');
-      await _logErrorToServer(
-        errorType: 'ForegroundTransitionError',
-        errorMessage: e.toString(),
-        context: 'LocationService._handleAppForegrounded',
-      );
     }
   }
 
@@ -890,11 +831,7 @@ class LocationService {
       return true;
     } catch (e) {
       debugPrint('[LocationService] Location service check failed: $e');
-      await _logErrorToServer(
-        errorType: 'LocationServiceCheckError',
-        errorMessage: e.toString(),
-        context: 'LocationService._checkLocationServices',
-      );
+
       return false;
     }
   }
@@ -922,11 +859,7 @@ class LocationService {
       return true;
     } catch (e) {
       debugPrint('[LocationService] Location permission check failed: $e');
-      await _logErrorToServer(
-        errorType: 'LocationPermissionError',
-        errorMessage: e.toString(),
-        context: 'LocationService._checkLocationPermissions',
-      );
+
       return false;
     }
   }
@@ -945,11 +878,6 @@ class LocationService {
       }
     } catch (e) {
       debugPrint('[LocationService] Error checking battery level: $e');
-      await _logErrorToServer(
-        errorType: 'BatteryCheckError',
-        errorMessage: e.toString(),
-        context: 'LocationService._optimizeForBattery',
-      );
     }
   }
 
@@ -1049,9 +977,8 @@ class LocationService {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": location['gps_status'],
-              if (location['battery_level'] != null)
-                "battery_percentage": "${location['battery_level']}",
+              "gps_status": "${location['gps_status']}",
+              "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,
             };
 
@@ -1059,8 +986,7 @@ class LocationService {
               '[LocationService] Sending location ${location['id']} to API',
             );
             DayLogStoreLocationResponseModel? response = await BasicService()
-                .postDayLogLocations(_currentToken!, payload)
-                .timeout(_apiTimeout);
+                .postDayLogLocations(_currentToken!, payload);
 
             return {
               'id': location['id'],
@@ -1081,12 +1007,7 @@ class LocationService {
         }
       } catch (e) {
         debugPrint('[LocationService] Error syncing batch $i: $e');
-        await _logErrorToServer(
-          errorType: 'BatchSyncError',
-          errorMessage: e.toString(),
-          context: 'LocationService._syncStoredLocations',
-          additionalData: {'batch_index': i},
-        );
+
         break;
       }
     }
@@ -1136,11 +1057,6 @@ class LocationService {
       batteryLevel = await _battery.batteryLevel;
     } catch (e) {
       debugPrint('[LocationService] Error getting battery level: $e');
-      await _logErrorToServer(
-        errorType: 'BatteryLevelError',
-        errorMessage: e.toString(),
-        context: 'LocationService._sendLocationToAPI',
-      );
     }
 
     final gpsStatus = await _getGpsStatus();
@@ -1150,7 +1066,7 @@ class LocationService {
       "longitude": longitude,
       "gps_status": "${gpsStatus.value}",
       "recorded_at": apiFormat.format(DateTime.now()),
-      if (batteryLevel != null) "battery_percentage": "$batteryLevel",
+      "battery_percentage": "$batteryLevel",
     };
 
     debugPrint('[LocationService] Saving location to database');
@@ -1171,9 +1087,10 @@ class LocationService {
 
     try {
       debugPrint('[LocationService] Sending location to API');
-      final response = await BasicService()
-          .postDayLogLocations(token, locationPayload)
-          .timeout(_apiTimeout);
+      final response = await BasicService().postDayLogLocations(
+        token,
+        locationPayload,
+      );
 
       if (response == null ||
           response.success == false ||
@@ -1184,15 +1101,6 @@ class LocationService {
         debugPrint('  - Errors: ${response?.errors}');
         debugPrint('  - Data: ${response?.data}');
 
-        await _logErrorToServer(
-          errorType: 'LocationApiFailure',
-          errorMessage: response?.errors?.toString() ?? 'Unknown API failure',
-          context: 'LocationService._sendLocationToAPI',
-          additionalData: {
-            'api_response': response?.toJson(),
-            'location_data': locationPayload,
-          },
-        );
         return;
       }
 
@@ -1212,12 +1120,6 @@ class LocationService {
     } catch (e) {
       debugPrint(
         '[LocationService] API error: $e (Battery: ${batteryLevel ?? 'N/A'}%)',
-      );
-      await _logErrorToServer(
-        errorType: 'LocationApiError',
-        errorMessage: e.toString(),
-        context: 'LocationService._sendLocationToAPI',
-        additionalData: {'location_data': locationPayload},
       );
     }
   }
@@ -1245,79 +1147,9 @@ class LocationService {
       return _isTracking ? GpsStatus.searching : GpsStatus.enabled;
     } catch (e) {
       debugPrint('[LocationService] Error getting GPS status: $e');
-      await _logErrorToServer(
-        errorType: 'GpsStatusError',
-        errorMessage: e.toString(),
-        context: 'LocationService._sendLocationToAPI',
-      );
+
       return GpsStatus.unavailable;
     }
-  }
-
-  Future<void> _logErrorToServer({
-    required String errorType,
-    required String errorMessage,
-    required String context,
-    String? stackTrace,
-    Map<String, dynamic>? additionalData,
-  }) async {
-    if (_currentToken == null) {
-      debugPrint('[ErrorLogging] No token available - cannot log error');
-      return;
-    }
-
-    debugPrint('[ErrorLogging] Preparing to log error: $errorType');
-    final errorPayload = {
-      'error_type': errorType,
-      'error_message': errorMessage,
-      'context': context,
-      if (stackTrace != null) 'stack_trace': stackTrace,
-      if (additionalData != null) 'additional_data': additionalData,
-      'timestamp': DateTime.now().toIso8601String(),
-      'device_info': {
-        'platform': Platform.operatingSystem,
-        'version': Platform.operatingSystemVersion,
-      },
-      'app_state': {
-        'is_tracking': _isTracking,
-        'is_background': _isInBackground,
-        'battery_level': await _battery.batteryLevel,
-        'connectivity': _isConnected ? 'connected' : 'disconnected',
-      },
-    };
-
-    for (int attempt = 1; attempt <= _maxErrorRetryAttempts; attempt++) {
-      try {
-        debugPrint('[ErrorLogging] Attempt $attempt to log error');
-        final Map<String, String> formData = {
-          "connection": "mobile",
-          "queue": "default",
-          "payload": jsonEncode(errorPayload),
-          "exception": errorType,
-        };
-
-        final response = await BasicService()
-            .postFailedJob(formData)
-            .timeout(const Duration(seconds: 10));
-
-        if (response?.success == true) {
-          debugPrint(
-            '[ErrorLogging] Error logged successfully (attempt $attempt)',
-          );
-          return;
-        } else {
-          debugPrint('[ErrorLogging] Error logging failed (attempt $attempt)');
-        }
-      } catch (e) {
-        debugPrint('[ErrorLogging] Failed to log error (attempt $attempt): $e');
-      }
-
-      if (attempt < _maxErrorRetryAttempts) {
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    }
-
-    debugPrint('[ErrorLogging] All attempts to log error failed');
   }
 
   Future<void> syncAllUnsyncedLocationsBeforeClosing() async {
@@ -1371,16 +1203,16 @@ class LocationService {
               "trip_id": _currentDayLogId!,
               "latitude": location['latitude'],
               "longitude": location['longitude'],
-              "gps_status": location['gps_status'],
-              if (location['battery_level'] != null)
-                "battery_percentage": "${location['battery_level']}",
+              "gps_status": "${location['gps_status']}",
+              "battery_percentage": "${location['battery_level']}",
               "recorded_at": formattedDate,
             };
 
             debugPrint('[FinalSync] Sending location ${location['id']} to API');
-            final response = await BasicService()
-                .postDayLogLocations(_currentToken!, payload)
-                .timeout(const Duration(seconds: 30)); // Extended timeout
+            final response = await BasicService().postDayLogLocations(
+              _currentToken!,
+              payload,
+            );
 
             return {
               'id': location['id'],
@@ -1402,12 +1234,7 @@ class LocationService {
         }
       } catch (e) {
         debugPrint('[FinalSync] Error syncing final batch $i: $e');
-        await _logErrorToServer(
-          errorType: 'FinalSyncError',
-          errorMessage: e.toString(),
-          context: 'LocationService.syncAllUnsyncedLocationsBeforeClosing',
-          additionalData: {'batch_index': i},
-        );
+
         break;
       }
     }
@@ -1424,15 +1251,6 @@ class LocationService {
     if (remainingUnsynced > 0) {
       debugPrint(
         '[FinalSync] Warning: $remainingUnsynced locations remain unsynced after final attempt',
-      );
-      await _logErrorToServer(
-        errorType: 'RemainingUnsyncedLocations',
-        errorMessage: '$remainingUnsynced locations could not be synced',
-        context: 'LocationService.syncAllUnsyncedLocationsBeforeClosing',
-        additionalData: {
-          'total_unsynced': unsyncedLocations.length,
-          'successfully_synced': successfulIds.length,
-        },
       );
     }
   }

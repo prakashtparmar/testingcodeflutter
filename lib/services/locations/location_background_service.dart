@@ -1,16 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'location_api_service.dart';
 
+@pragma('vm:entry-point')
 class LocationBackgroundService {
   static const String _backgroundTaskName = 'locationBackgroundTask';
   final LocationApiService _apiService = LocationApiService();
 
+  @pragma('vm:entry-point')
   Future<void> setup() async {
     await Workmanager().initialize(
       _backgroundTaskCallback,
@@ -28,9 +31,11 @@ class LocationBackgroundService {
         initialNotificationContent: 'Tracking your location in background',
         foregroundServiceNotificationId: 888,
       ),
+      iosConfiguration: IosConfiguration(),
     );
   }
 
+  @pragma('vm:entry-point')
   static void _backgroundTaskCallback() {
     Workmanager().executeTask((task, inputData) async {
       final token = await SharedPrefHelper.getToken();
@@ -47,6 +52,7 @@ class LocationBackgroundService {
           position.latitude,
           position.longitude,
           batteryLevel,
+          "${GpsStatus.enabled.value}",
         );
 
         return response?.success ?? false;
@@ -56,6 +62,7 @@ class LocationBackgroundService {
     });
   }
 
+  @pragma('vm:entry-point')
   static Future<void> _onBackgroundServiceStart(ServiceInstance service) async {
     if (service is AndroidServiceInstance) {
       service.setAsForegroundService();
@@ -80,6 +87,7 @@ class LocationBackgroundService {
     });
   }
 
+  @pragma('vm:entry-point')
   static Future<void> _sendLocationInBackground(
     ServiceInstance service,
     String token,
@@ -94,6 +102,7 @@ class LocationBackgroundService {
         position.latitude,
         position.longitude,
         batteryLevel,
+        "${GpsStatus.enabled.value}",
       );
     } catch (e) {
       service.stopSelf();

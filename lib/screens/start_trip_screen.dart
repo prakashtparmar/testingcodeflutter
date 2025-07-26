@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +10,7 @@ import 'package:snap_check/models/party_users_data_model.dart';
 import 'package:snap_check/models/start_trip_response_model.dart';
 import 'package:snap_check/models/tour_details.dart';
 import 'package:snap_check/services/basic_service.dart';
-import 'package:snap_check/services/location_service.dart';
+import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -312,7 +313,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
           return;
         }
         // Initialize
-        final locationService = LocationService();
+        final locationService = NewLocationService();
 
         // Start tracking
         if (locationService.isTracking) {
@@ -543,6 +544,11 @@ class _StartTripScreenState extends State<StartTripScreen> {
                         labelText: 'Opening K.M.',
                         border: OutlineInputBorder(),
                       ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[0-9]'),
+                        ), // Only numbers allowed
+                      ],
                       keyboardType: TextInputType.number,
                       onChanged: (val) => openingKm = val,
                       validator:

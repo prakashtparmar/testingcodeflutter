@@ -49,7 +49,6 @@ class NewLocationService {
   bool _isTracking = false;
   String? _currentToken;
   String? _currentDayLogId;
-  LocationPermission _permissionStatus = LocationPermission.denied;
   bool _serviceEnabled = false;
   bool _isConnected = true;
   static bool _isInBackground = false;
@@ -192,7 +191,7 @@ class NewLocationService {
       "longitude": longitude,
       "gps_status": "${GpsStatus.enabled.value}",
       "recorded_at": apiFormat.format(DateTime.now()),
-      if (batteryLevel != -1) "battery_percentage": "$batteryLevel",
+      "battery_percentage": "$batteryLevel",
     };
 
     await _databaseService.saveLocation(locationPayload);
@@ -210,6 +209,7 @@ class NewLocationService {
         latitude,
         longitude,
         batteryLevel,
+        "${GpsStatus.enabled.value}",
       );
 
       if (response?.success == true) {
@@ -269,6 +269,7 @@ class NewLocationService {
             location['latitude'],
             location['longitude'],
             location['battery_level'],
+            "$location['gps_status']",
           );
 
           if (response?.success == true) {
@@ -302,6 +303,7 @@ class NewLocationService {
           location['latitude'],
           location['longitude'],
           location['battery_level'],
+          "${location['gps_status']}",
         );
 
         if (response?.success == true) {

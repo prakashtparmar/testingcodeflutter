@@ -28,7 +28,7 @@ class BasicService extends Service {
       },
     );
 
-    return LocationsResponseModel.fromJson(_handleResponse(response));
+    return LocationsResponseModel.fromJson(_handleResponse("", response));
   }
 
   Future<TourDetailsResponseModel?> getTourDetails(String token) async {
@@ -41,7 +41,7 @@ class BasicService extends Service {
       },
     );
 
-    return TourDetailsResponseModel.fromJson(_handleResponse(response));
+    return TourDetailsResponseModel.fromJson(_handleResponse("", response));
   }
 
   Future<DayLogResponseModel?> getDayLogs(String token) async {
@@ -54,7 +54,7 @@ class BasicService extends Service {
       },
     );
 
-    return DayLogResponseModel.fromJson(_handleResponse(response));
+    return DayLogResponseModel.fromJson(_handleResponse("", response));
   }
 
   Future<PartyUsersResponseModel?> getPartyUsers(String token) async {
@@ -67,7 +67,7 @@ class BasicService extends Service {
       },
     );
 
-    return PartyUsersResponseModel.fromJson(_handleResponse(response));
+    return PartyUsersResponseModel.fromJson(_handleResponse("", response));
   }
 
   Future<StartTripResponseModel?> postDayLog(
@@ -118,7 +118,7 @@ class BasicService extends Service {
       },
     );
 
-    return DayLogDetailResponseModel.fromJson(_handleResponse(response));
+    return DayLogDetailResponseModel.fromJson(_handleResponse("", response));
   }
 
   Future<DayLogStoreLocationResponseModel?> postDayLogLocations(
@@ -135,7 +135,9 @@ class BasicService extends Service {
       body: jsonEncode(fields),
     );
 
-    return DayLogStoreLocationResponseModel.fromJson(_handleResponse(response));
+    return DayLogStoreLocationResponseModel.fromJson(
+      _handleResponse(jsonEncode(fields), response),
+    );
   }
 
   Future<PostDayLogsResponseModel?> postCloseDay(
@@ -177,7 +179,7 @@ class BasicService extends Service {
       },
     );
 
-    return LeavesResponseModel.fromJson(_handleResponse(response));
+    return LeavesResponseModel.fromJson(_handleResponse("",response));
   }
 
   Future<LeaveTypeResponseModel?> getLeaveTypes(String token) async {
@@ -190,7 +192,7 @@ class BasicService extends Service {
       },
     );
 
-    return LeaveTypeResponseModel.fromJson(_handleResponse(response));
+    return LeaveTypeResponseModel.fromJson(_handleResponse("",response));
   }
 
   Future<LeaveRequestResponseModel?> postLeaveRequest(
@@ -207,7 +209,9 @@ class BasicService extends Service {
       body: jsonEncode(body),
     );
 
-    return LeaveRequestResponseModel.fromJson(_handleResponse(response));
+    return LeaveRequestResponseModel.fromJson(
+      _handleResponse(jsonEncode(body), response),
+    );
   }
 
   Future<ActiveDayLogResponseModel?> getActiveDayLog(String token) async {
@@ -220,7 +224,7 @@ class BasicService extends Service {
       },
     );
 
-    return ActiveDayLogResponseModel.fromJson(_handleResponse(response));
+    return ActiveDayLogResponseModel.fromJson(_handleResponse("",response));
   }
 
   Future<LeaveRequestResponseModel?> postFailedJob(
@@ -235,11 +239,14 @@ class BasicService extends Service {
       body: jsonEncode(body),
     );
 
-    return LeaveRequestResponseModel.fromJson(_handleResponse(response));
+    return LeaveRequestResponseModel.fromJson(
+      _handleResponse(jsonEncode(body), response),
+    );
   }
 
-  dynamic _handleResponse(http.Response response) {
+  dynamic _handleResponse(String? request, http.Response response) {
     debugPrint('Response URL: ${response.request!.url.path}');
+    debugPrint('Response Requests: $request');
     debugPrint('Response Headers: ${response.request!.headers.values}');
     debugPrint('Response status: ${response.statusCode}');
     debugPrint('Response body: ${response.body}');

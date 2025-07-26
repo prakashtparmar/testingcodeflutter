@@ -5,7 +5,7 @@ import 'package:snap_check/models/active_day_log_response_model.dart';
 import 'package:snap_check/screens/setting_screen.dart';
 import 'package:snap_check/services/api_exception.dart';
 import 'package:snap_check/services/basic_service.dart';
-import 'package:snap_check/services/location_service.dart';
+import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:snap_check/utils/permission_uril.dart';
 
@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final BasicService _basicService = BasicService();
   ActiveDayLogDataModel? _activeDayLogDataModel = null;
   final permissionHandler = PermissionUtil();
-  final locationService = LocationService();
+  final locationService = NewLocationService();
   bool _isLoading = true;
 
   @override

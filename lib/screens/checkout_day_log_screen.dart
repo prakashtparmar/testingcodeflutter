@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
 import 'package:snap_check/models/day_log_detail_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
-import 'package:snap_check/services/location_service.dart';
+import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
 class CheckoutDayLogScreen extends StatefulWidget {
@@ -188,7 +189,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
 
       if (response?.success == true) {
         SharedPrefHelper.clearActiveDayLog();
-        final locationService = LocationService();
+        final locationService = NewLocationService();
 
         bool isRunning = await locationService.isServiceRunning();
         debugPrint("Is service running before stop: $isRunning");
@@ -329,6 +330,11 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                       labelText: 'Closing K.M.',
                       border: OutlineInputBorder(),
                     ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[0-9]'),
+                      ), // Only numbers allowed
+                    ],
                     keyboardType: TextInputType.number,
                     onChanged: (val) => closingKm = val,
                     validator:
