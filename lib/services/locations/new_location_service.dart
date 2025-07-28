@@ -269,7 +269,7 @@ class NewLocationService {
             location['latitude'],
             location['longitude'],
             location['battery_level'],
-            "$location['gps_status']",
+            location['gps_status'].toString(),
           );
 
           if (response?.success == true) {
@@ -303,7 +303,7 @@ class NewLocationService {
           location['latitude'],
           location['longitude'],
           location['battery_level'],
-          "${location['gps_status']}",
+          location['gps_status'].toString(),
         );
 
         if (response?.success == true) {
