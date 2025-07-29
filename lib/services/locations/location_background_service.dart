@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:snap_check/services/locations/location_database_service.dart';
 import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:snap_check/services/share_pref.dart';
@@ -15,6 +17,9 @@ class LocationBackgroundService {
 
   @pragma('vm:entry-point')
   Future<void> setup() async {
+    // Initialize database service
+    await LocationDatabaseService().initDatabase();
+    
     await Workmanager().initialize(
       _backgroundTaskCallback,
       isInDebugMode: true,
@@ -46,16 +51,33 @@ class LocationBackgroundService {
       try {
         final position = await Geolocator.getCurrentPosition();
         final batteryLevel = await Battery().batteryLevel;
-        final response = await LocationApiService().sendLocation(
-          token,
-          dayLogId,
-          position.latitude,
-          position.longitude,
-          batteryLevel,
-          "${GpsStatus.enabled.value}",
-        );
+        // Initialize database
+        final dbService = LocationDatabaseService();
+        await dbService.initDatabase();
 
-        return response?.success ?? false;
+        // Store in database
+        await dbService.saveLocation({
+          'tripId': int.tryParse(dayLogId),
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'gps_status': "${GpsStatus.enabled.value}",
+          'battery_percentage': batteryLevel,
+        });
+        // Try to send if connected
+        if (await Connectivity().checkConnectivity() !=
+            ConnectivityResult.none) {
+          final response = await LocationApiService().sendLocation(
+            token,
+            dayLogId,
+            position.latitude,
+            position.longitude,
+            batteryLevel,
+            "${GpsStatus.enabled.value}",
+          );
+          return response?.success ?? false;
+        }
+
+        return true;
       } catch (e) {
         return false;
       }
@@ -96,14 +118,29 @@ class LocationBackgroundService {
     try {
       final position = await Geolocator.getCurrentPosition();
       final batteryLevel = await Battery().batteryLevel;
-      await LocationApiService().sendLocation(
-        token,
-        dayLogId,
-        position.latitude,
-        position.longitude,
-        batteryLevel,
-        "${GpsStatus.enabled.value}",
-      );
+
+      // Store in database first
+      final dbService = LocationDatabaseService();
+      await dbService.initDatabase();
+
+      await dbService.saveLocation({
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'gps_status': "${GpsStatus.enabled.value}",
+        'battery_percentage': batteryLevel,
+        'tripId': int.tryParse(dayLogId),
+      });
+      // Try to send to API if connected
+      if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
+        await LocationApiService().sendLocation(
+          token,
+          dayLogId,
+          position.latitude,
+          position.longitude,
+          batteryLevel,
+          "${GpsStatus.enabled.value}",
+        );
+      }
     } catch (e) {
       service.stopSelf();
     }

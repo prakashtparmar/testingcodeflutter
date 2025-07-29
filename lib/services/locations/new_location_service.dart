@@ -186,7 +186,7 @@ class NewLocationService {
 
     final batteryLevel = await _battery.batteryLevel;
     final locationPayload = {
-      "trip_id": _currentDayLogId!,
+      "tripId": _currentDayLogId!,
       "latitude": latitude,
       "longitude": longitude,
       "gps_status": "${GpsStatus.enabled.value}",
@@ -339,10 +339,18 @@ class NewLocationService {
   void _handleAppBackground() {
     if (!_isTracking) return;
 
+    _isInBackground = true;
+
+    // Ensure database is initialized
+    _databaseService.initDatabase();
+
     if (Platform.isAndroid) {
       final service = FlutterBackgroundService();
       service.startService();
-      _positionStream?.pause();
+
+      // Instead of pausing, let the background service take over
+      _positionStream?.cancel();
+      _positionStream = null;
     }
   }
 
@@ -393,6 +401,7 @@ class NewLocationService {
 
     try {
       // Implement error logging to server
+      debugPrint('[NewLocationService] Logging error: $errorPayload');
     } catch (e) {
       debugPrint('[NewLocationService] Error logging failed: $e');
     }

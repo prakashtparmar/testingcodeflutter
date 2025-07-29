@@ -17,6 +17,7 @@ class LocationDatabaseService {
           await db.execute('''
             CREATE TABLE locations(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
+              tripId INTEGER,
               recorded_at INTEGER NOT NULL,
               latitude REAL NOT NULL,
               longitude REAL NOT NULL,
@@ -38,6 +39,7 @@ class LocationDatabaseService {
     try {
       await _database!.insert('locations', {
         'recorded_at': DateTime.now().millisecondsSinceEpoch,
+        'tripId': location['tripId'] ?? null,
         'latitude': location['latitude'],
         'longitude': location['longitude'],
         'gps_status': location['gps_status'],
