@@ -9,6 +9,7 @@ class LocationApiService {
     double longitude,
     int? batteryLevel,
     String gpsStatus,
+    String? recordedAt,
   ) async {
     try {
       final payload = {
@@ -17,6 +18,7 @@ class LocationApiService {
         "longitude": longitude,
         "gps_status": gpsStatus,
         "battery_percentage": "$batteryLevel",
+        "recorded_at": "$recordedAt",
       };
 
       return await BasicService().postDayLogLocations(token, payload);

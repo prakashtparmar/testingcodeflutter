@@ -32,4 +32,13 @@ class LocationUtils {
     }
     return true;
   }
+
+  static bool isLocationAccurate(Position position) {
+    return position.accuracy <= 100; // meters
+  }
+
+  static bool isLocationFresh(Position position) {
+    return position.timestamp != null &&
+        DateTime.now().difference(position.timestamp!) < Duration(minutes: 5);
+  }
 }

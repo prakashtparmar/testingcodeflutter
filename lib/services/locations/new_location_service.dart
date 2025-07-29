@@ -210,6 +210,7 @@ class NewLocationService {
         longitude,
         batteryLevel,
         "${GpsStatus.enabled.value}",
+        apiFormat.format(DateTime.now()),
       );
 
       if (response?.success == true) {
@@ -270,6 +271,9 @@ class NewLocationService {
             location['longitude'],
             location['battery_level'],
             location['gps_status'].toString(),
+            apiFormat.format(
+              DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+            ),
           );
 
           if (response?.success == true) {
@@ -278,7 +282,6 @@ class NewLocationService {
         }
       } catch (e) {
         debugPrint('[NewLocationService] Batch sync error: $e');
-        break;
       }
     }
 
@@ -304,6 +307,9 @@ class NewLocationService {
           location['longitude'],
           location['battery_level'],
           location['gps_status'].toString(),
+          apiFormat.format(
+            DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+          ),
         );
 
         if (response?.success == true) {
@@ -340,18 +346,23 @@ class NewLocationService {
     if (!_isTracking) return;
 
     _isInBackground = true;
-
-    // Ensure database is initialized
     _databaseService.initDatabase();
 
     if (Platform.isAndroid) {
       final service = FlutterBackgroundService();
       service.startService();
 
-      // Instead of pausing, let the background service take over
-      _positionStream?.cancel();
-      _positionStream = null;
+      // Set up periodic sync attempts
+      Timer.periodic(Duration(minutes: 5), (timer) async {
+        if (await _connectivity.checkConnectivity() !=
+            ConnectivityResult.none) {
+          await _syncStoredLocations(force: true);
+        }
+      });
     }
+
+    _positionStream?.cancel();
+    _positionStream = null;
   }
 
   void _handleAppForegrounded() {

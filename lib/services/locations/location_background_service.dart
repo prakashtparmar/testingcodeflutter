@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:intl/intl.dart';
 import 'package:snap_check/services/locations/location_database_service.dart';
 import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:workmanager/workmanager.dart';
@@ -19,7 +20,7 @@ class LocationBackgroundService {
   Future<void> setup() async {
     // Initialize database service
     await LocationDatabaseService().initDatabase();
-    
+
     await Workmanager().initialize(
       _backgroundTaskCallback,
       isInDebugMode: true,
@@ -45,7 +46,7 @@ class LocationBackgroundService {
     Workmanager().executeTask((task, inputData) async {
       final token = await SharedPrefHelper.getToken();
       final dayLogId = await SharedPrefHelper.getActiveDayLogId();
-
+      final DateFormat apiFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
       if (token == null || dayLogId == null) return false;
 
       try {
@@ -62,6 +63,7 @@ class LocationBackgroundService {
           'longitude': position.longitude,
           'gps_status': "${GpsStatus.enabled.value}",
           'battery_percentage': batteryLevel,
+          'recorded_at': DateTime.now().millisecondsSinceEpoch,
         });
         // Try to send if connected
         if (await Connectivity().checkConnectivity() !=
@@ -73,6 +75,7 @@ class LocationBackgroundService {
             position.longitude,
             batteryLevel,
             "${GpsStatus.enabled.value}",
+            apiFormat.format(DateTime.now()),
           );
           return response?.success ?? false;
         }
@@ -116,6 +119,7 @@ class LocationBackgroundService {
     String dayLogId,
   ) async {
     try {
+      final DateFormat apiFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
       final position = await Geolocator.getCurrentPosition();
       final batteryLevel = await Battery().batteryLevel;
 
@@ -129,6 +133,7 @@ class LocationBackgroundService {
         'gps_status': "${GpsStatus.enabled.value}",
         'battery_percentage': batteryLevel,
         'tripId': int.tryParse(dayLogId),
+        'recorded_at': DateTime.now().millisecondsSinceEpoch,
       });
       // Try to send to API if connected
       if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
@@ -139,6 +144,7 @@ class LocationBackgroundService {
           position.longitude,
           batteryLevel,
           "${GpsStatus.enabled.value}",
+          apiFormat.format(DateTime.now()),
         );
       }
     } catch (e) {
