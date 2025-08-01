@@ -6,6 +6,7 @@ class SharedPrefHelper {
   static const String _userKey = 'logged_in_user';
   static const String _tokenKey = 'token';
   static const String _activeDayLogId = 'activeDayLogId';
+  static const String _isTrackingActive = 'isTrackingActive';
 
   // Save user
   static Future<void> saveUser(User user) async {
@@ -65,5 +66,15 @@ class SharedPrefHelper {
     final pref = await SharedPreferences.getInstance();
     await pref.remove(_userKey);
     await pref.remove(_tokenKey);
+  }
+
+  static Future<bool> isTrackingActive() async {
+    final pref = await SharedPreferences.getInstance();
+    return pref.getBool(_isTrackingActive) ?? false;
+  }
+
+  static Future<void> setTrackingActive(bool isTrackingActive) async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.setBool(_isTrackingActive, isTrackingActive);
   }
 }

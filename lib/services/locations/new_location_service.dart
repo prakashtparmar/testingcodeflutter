@@ -77,9 +77,20 @@ class NewLocationService {
     try {
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
         result,
-      ) {
+      ) async {
         _isConnected = result != ConnectivityResult.none;
-        if (_isConnected) _syncStoredLocations();
+        if (_isConnected) {
+          // Sync immediately when connection is restored
+          await _syncStoredLocations(force: true);
+
+          // If in background, also trigger background service sync
+          if (_isInBackground && Platform.isAndroid) {
+            final service = FlutterBackgroundService();
+            if (await service.isRunning()) {
+              service.invoke('forceSync');
+            }
+          }
+        }
       });
 
       final connectivityResult = await _connectivity.checkConnectivity();
@@ -126,14 +137,38 @@ class NewLocationService {
     await _syncStoredLocations();
 
     _positionStream?.cancel();
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
-        accuracy:
-            _isInBackground
-                ? LocationAccuracy.bestForNavigation
-                : LocationAccuracy.high,
-        distanceFilter: 10,
+    final androidSettings = AndroidSettings(
+      accuracy:
+          _isInBackground
+              ? LocationAccuracy
+                  .lowest // Android background
+              : LocationAccuracy.best, // Android foreground
+
+      distanceFilter: 10, // Meters
+      forceLocationManager: false, // Use FusedLocationProvider by default
+      intervalDuration: const Duration(
+        seconds: 15,
+      ), // Minimum time between updates
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationText: "Tracking your location",
+        notificationTitle: "Location Service Active",
+        enableWakeLock: true,
       ),
+    );
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings:
+          Platform.isAndroid
+              ? androidSettings
+              : LocationSettings(
+                accuracy:
+                    _isInBackground
+                        ? LocationAccuracy
+                            .bestForNavigation // iOS background
+                        : LocationAccuracy.best, // Android foreground
+
+                distanceFilter: 10, // Meters
+              ),
     ).listen((Position position) async {
       if (await LocationUtils.isValidLocation(position)) {
         _sendLocationToAPI(position.latitude, position.longitude);
@@ -147,30 +182,58 @@ class NewLocationService {
   Future<void> stopTracking() async {
     if (!_isTracking) return;
 
-    await syncAllUnsyncedLocationsBeforeClosing();
+    // First sync all locations
+    try {
+      await syncAllUnsyncedLocationsBeforeClosing();
+    } catch (e) {
+      debugPrint('[NewLocationService] Final sync error: $e');
+      await _logErrorToServer(
+        errorType: 'FinalSyncError',
+        errorMessage: e.toString(),
+        context: 'NewLocationService.stopTracking',
+      );
+      // Don't return here - we still want to stop tracking
+    }
 
+    // Then stop all services
+    await _stopAllServices();
+
+    // Finally clear state
+    _clearTrackingState();
+  }
+
+  Future<void> _stopAllServices() async {
     await _positionStream?.cancel();
     _positionStream = null;
-
-    _isTracking = false;
-    _currentToken = null;
-    _currentDayLogId = null;
-    _lastSentLatitude = null;
-    _lastSentLongitude = null;
-    _lastLocationSentTime = null;
 
     try {
       if (Platform.isAndroid) {
         final service = FlutterBackgroundService();
         if (await service.isRunning()) {
           service.invoke('stopService');
+          // await service.stopSelf();
           await Future.delayed(const Duration(seconds: 1));
         }
         await Workmanager().cancelAll();
       }
     } catch (e) {
       debugPrint('[NewLocationService] Error stopping services: $e');
+      await _logErrorToServer(
+        errorType: 'ServiceStopError',
+        errorMessage: e.toString(),
+        context: 'NewLocationService._stopAllServices',
+      );
     }
+  }
+
+  void _clearTrackingState() {
+    _isTracking = false;
+    _lastSentLatitude = null;
+    _lastSentLongitude = null;
+    _lastLocationSentTime = null;
+
+    // Don't clear token and dayLogId until we're sure sync is complete
+    // They'll be cleared when the service is completely stopped
   }
 
   Future<void> _sendLocationToAPI(double latitude, double longitude) async {
@@ -247,8 +310,11 @@ class NewLocationService {
         _currentDayLogId == null) {
       return;
     }
+    await _databaseService.initDatabase();
 
-    final unsyncedLocations = await _databaseService.getUnsyncedLocations();
+    final unsyncedLocations = await _databaseService.getUnsyncedLocations(
+      int.tryParse(_currentDayLogId!) ?? 0,
+    );
     if (unsyncedLocations.isEmpty) return;
 
     final successfulIds = <int>[];
@@ -291,37 +357,118 @@ class NewLocationService {
   }
 
   Future<void> syncAllUnsyncedLocationsBeforeClosing() async {
-    if (_currentToken == null || _currentDayLogId == null) return;
+    if (_currentToken == null || _currentDayLogId == null) {
+      debugPrint(
+        '[NewLocationService] No credentials available for final sync',
+      );
+      return;
+    }
 
-    final unsyncedLocations = await _databaseService.getUnsyncedLocations();
+    // Wait for connection if none available
+    if (!_isConnected) {
+      try {
+        debugPrint('[NewLocationService] Waiting for network connection...');
+        await waitForConnection();
+        debugPrint('[NewLocationService] Network connection established');
+      } catch (e) {
+        debugPrint(
+          '[NewLocationService] No connection available for final sync: $e',
+        );
+        return;
+      }
+    }
+    // Keep database connection open during sync
+    await _databaseService.initDatabase();
+
+    final unsyncedLocations = await _databaseService.getUnsyncedLocations(
+      int.tryParse(_currentDayLogId!) ?? 0,
+    );
     if (unsyncedLocations.isEmpty) return;
 
+    debugPrint(
+      '[NewLocationService] Syncing ${unsyncedLocations.length} locations before closing',
+    );
+
     final successfulIds = <int>[];
+    final failedLocations = <Map<String, dynamic>>[];
 
-    for (final location in unsyncedLocations) {
-      try {
-        final response = await _apiService.sendLocation(
-          _currentToken!,
-          _currentDayLogId!,
-          location['latitude'],
-          location['longitude'],
-          location['battery_level'],
-          location['gps_status'].toString(),
-          apiFormat.format(
-            DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
-          ),
-        );
+    // Sync in batches with retry logic
+    const batchSize = 5;
+    const maxRetries = 3;
 
-        if (response?.success == true) {
-          successfulIds.add(location['id']);
+    for (var i = 0; i < unsyncedLocations.length; i += batchSize) {
+      final batch = unsyncedLocations.sublist(
+        i,
+        i + batchSize > unsyncedLocations.length
+            ? unsyncedLocations.length
+            : i + batchSize,
+      );
+
+      for (final location in batch) {
+        int retryCount = 0;
+        bool success = false;
+
+        while (retryCount < maxRetries && !success) {
+          try {
+            final response = await _apiService.sendLocation(
+              _currentToken!,
+              _currentDayLogId!,
+              location['latitude'],
+              location['longitude'],
+              location['battery_level'],
+              location['gps_status'].toString(),
+              apiFormat.format(
+                DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+              ),
+            );
+
+            if (response?.success == true) {
+              successfulIds.add(location['id']);
+              success = true;
+            } else {
+              retryCount++;
+              await Future.delayed(Duration(seconds: 1 * retryCount));
+            }
+          } catch (e) {
+            retryCount++;
+            debugPrint(
+              '[NewLocationService] Sync attempt $retryCount failed: $e',
+            );
+            await Future.delayed(Duration(seconds: 1 * retryCount));
+          }
         }
-      } catch (e) {
-        debugPrint('[NewLocationService] Final sync error: $e');
+
+        if (!success) {
+          failedLocations.add(location);
+          debugPrint(
+            '[NewLocationService] Failed to sync location: ${location['id']}',
+          );
+        }
       }
     }
 
+    // Mark successfully synced locations
     if (successfulIds.isNotEmpty) {
       await _databaseService.markLocationsAsSynced(successfulIds);
+      debugPrint(
+        '[NewLocationService] Successfully synced ${successfulIds.length} locations',
+      );
+    }
+
+    // Log failed syncs
+    if (failedLocations.isNotEmpty) {
+      debugPrint(
+        '[NewLocationService] Failed to sync ${failedLocations.length} locations',
+      );
+      await _logErrorToServer(
+        errorType: 'FailedFinalSyncs',
+        errorMessage: '${failedLocations.length} locations failed to sync',
+        context: 'NewLocationService.syncAllUnsyncedLocationsBeforeClosing',
+        additionalData: {
+          'failed_count': failedLocations.length,
+          'last_failed_id': failedLocations.last['id'],
+        },
+      );
     }
   }
 
@@ -366,15 +513,21 @@ class NewLocationService {
   }
 
   void _handleAppForegrounded() {
+    _isInBackground = false;
+
     if (!_isTracking) return;
 
+    // Resume position updates
+    _positionStream?.resume();
+
+    // Immediately trigger sync of pending locations
+    _syncStoredLocations(force: true);
+
+    // Also ensure background service is stopped
     if (Platform.isAndroid) {
       final service = FlutterBackgroundService();
       service.invoke('stopService');
     }
-
-    _positionStream?.resume();
-    _syncStoredLocations(force: true);
   }
 
   Future<void> dispose() async {
@@ -416,5 +569,23 @@ class NewLocationService {
     } catch (e) {
       debugPrint('[NewLocationService] Error logging failed: $e');
     }
+  }
+
+  Future<void> waitForConnection({
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final startTime = DateTime.now();
+
+    while (DateTime.now().difference(startTime) < timeout) {
+      final connectivityResult = await _connectivity.checkConnectivity();
+      if (connectivityResult != ConnectivityResult.none) {
+        return;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
+
+    throw TimeoutException(
+      'Could not establish network connection within timeout',
+    );
   }
 }

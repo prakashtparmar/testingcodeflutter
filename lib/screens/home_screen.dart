@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ) async {
     final dayLogId = response.data!.id.toString();
     await SharedPrefHelper.saveActiveDayLogId(dayLogId);
-
+    SharedPrefHelper.setTrackingActive(true);
     if (mounted) {
       setState(() {
         _activeDayLogDataModel = response.data;
@@ -165,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Stop any existing tracking
     await _stopTrackingServices();
+    SharedPrefHelper.setTrackingActive(false);
     await SharedPrefHelper.clearActiveDayLog();
   }
 

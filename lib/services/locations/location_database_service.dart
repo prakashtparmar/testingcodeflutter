@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -51,12 +52,13 @@ class LocationDatabaseService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedLocations() async {
+  Future<List<Map<String, dynamic>>> getUnsyncedLocations(int tripId) async {
     if (_database == null) return [];
     try {
       return await _database!.query(
         'locations',
-        where: 'synced = 0',
+        where: 'synced = 0 AND tripId = ?',
+        whereArgs: [tripId],
         orderBy: 'recorded_at ASC',
       );
     } catch (e) {
@@ -66,12 +68,24 @@ class LocationDatabaseService {
 
   Future<void> markLocationsAsSynced(List<int> ids) async {
     if (_database == null || ids.isEmpty) return;
+
+    final db = _database; // Ensure database is open
+    final transaction = db!.batch();
+
     try {
-      await _database!.update('locations', {
-        'synced': 1,
-      }, where: 'id IN (${ids.join(',')})');
+      for (final id in ids) {
+        transaction.update(
+          'locations',
+          {'synced': 1},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+
+      await transaction.commit(noResult: true);
     } catch (e) {
-      throw Exception('Error marking locations as synced: $e');
+      debugPrint('[DatabaseService] Error marking locations as synced: $e');
+      rethrow;
     }
   }
 

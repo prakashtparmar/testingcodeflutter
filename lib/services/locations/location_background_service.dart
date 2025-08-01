@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:intl/intl.dart';
 import 'package:snap_check/services/locations/location_database_service.dart';
@@ -88,10 +89,73 @@ class LocationBackgroundService {
   }
 
   @pragma('vm:entry-point')
+  static Future<void> _syncPendingLocations(ServiceInstance service) async {
+    try {
+      final token = await SharedPrefHelper.getToken();
+      final dayLogId = await SharedPrefHelper.getActiveDayLogId();
+
+      if (token == null || dayLogId == null) return;
+
+      final dbService = LocationDatabaseService();
+      await dbService.initDatabase();
+
+      final unsyncedLocations = await dbService.getUnsyncedLocations(
+        int.tryParse(dayLogId) ?? 0,
+      );
+
+      if (unsyncedLocations.isEmpty) return;
+
+      for (final location in unsyncedLocations) {
+        await LocationApiService().sendLocation(
+          token,
+          dayLogId,
+          location['latitude'],
+          location['longitude'],
+          location['battery_level'],
+          location['gps_status'].toString(),
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(
+            DateTime.fromMillisecondsSinceEpoch(location['recorded_at']),
+          ),
+        );
+
+        await dbService.markLocationsAsSynced([location['id']]);
+      }
+    } catch (e) {
+      debugPrint('Background sync error: $e');
+    }
+  }
+
+  @pragma('vm:entry-point')
   static Future<void> _onBackgroundServiceStart(ServiceInstance service) async {
+    Timer? timer;
     if (service is AndroidServiceInstance) {
       service.setAsForegroundService();
     }
+    final connectivity = Connectivity();
+    StreamSubscription? connectivitySub;
+
+    // Initialize connectivity check
+    final isConnected =
+        await connectivity.checkConnectivity() != ConnectivityResult.none;
+
+    // Listen for connectivity changes
+    connectivitySub = connectivity.onConnectivityChanged.listen((result) async {
+      if (result != ConnectivityResult.none) {
+        await _syncPendingLocations(service);
+      }
+    });
+    // Listen for stop commands
+    service.on('stopService').listen((event) {
+      timer?.cancel();
+      if (service is AndroidServiceInstance) {
+        service.setAsBackgroundService();
+        service.stopSelf();
+      }
+    });
+
+    service.on('forceSync').listen((event) async {
+      await _syncPendingLocations(service);
+    });
 
     final token = await SharedPrefHelper.getToken();
     final dayLogId = await SharedPrefHelper.getActiveDayLogId();
@@ -101,8 +165,15 @@ class LocationBackgroundService {
       return;
     }
 
-    Timer.periodic(const Duration(seconds: 15), (timer) async {
+    timer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       if (service is AndroidServiceInstance) {
+        if (!await SharedPrefHelper.isTrackingActive()) {
+          service.setAsBackgroundService();
+          service.stopSelf();
+          timer.cancel();
+          return;
+        }
+
         service.setForegroundNotificationInfo(
           title: "Location Tracker",
           content: "Last update: ${DateTime.now()}",
