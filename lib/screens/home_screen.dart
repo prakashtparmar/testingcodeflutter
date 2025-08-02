@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
 import 'package:snap_check/models/active_day_log_response_model.dart';
@@ -51,44 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     final hasLocationPermission = await permissionHandler.hasLocationPermission;
-    final hasPreciseLocationPermission =
-        await permissionHandler.hasPreciseLocationPermission;
-    if (!hasLocationPermission || !hasPreciseLocationPermission) {
-      if (!hasLocationPermission) {
-        bool granted = await permissionHandler.requestLocationPermission();
-        if (granted) {
-          debugPrint("User granted location permission");
-          // Proceed with location-related tasks
-        } else {
-          debugPrint("User denied location permission");
-          // Show a message or open app settings
-        }
-      }
-      if (!hasPreciseLocationPermission) {
-        bool granted =
-            await permissionHandler.requestPreciseLocationPermission();
-        if (granted) {
-          debugPrint("User granted Precise location permission");
-          // Proceed with location-related tasks
-        } else {
-          debugPrint("User denied Precise location permission");
-          // Show a message or open app settings
-        }
-      }
-
-      // Optionally show user guidance
-    }
-    bool isLocationEnabled = await permissionHandler.areLocationServicesEnabled;
-    if (isLocationEnabled) {
-      debugPrint("Location services (GPS) are on");
-    } else {
-      debugPrint("Please enable GPS/Location services");
-      bool preciseGranted =
-          await permissionHandler.requestPreciseLocationPermission();
-      if (preciseGranted) {
-        debugPrint("Precise location access granted");
+    if (!hasLocationPermission) {
+      bool granted = await permissionHandler.requestLocationPermission();
+      if (!granted) {
+        openAppSettings();
+        debugPrint("User denied location permission");
       } else {
-        debugPrint("Only approximate location available");
+        debugPrint("Location permission granted");
       }
     }
   }

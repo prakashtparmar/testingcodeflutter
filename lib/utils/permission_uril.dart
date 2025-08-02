@@ -43,40 +43,46 @@ class PermissionUtil {
   }
 
   Future<bool> requestLocationPermission() async {
-    final status = await Permission.location.status;
+    final locationStatus = await Permission.location.status;
+    final locationAlwaysStatus = await Permission.locationAlways.status;
+    final locationWhenInUseStatus = await Permission.locationWhenInUse.status;
 
-    if (status.isPermanentlyDenied) {
+    if (locationStatus.isPermanentlyDenied ||
+        locationAlwaysStatus.isPermanentlyDenied ||
+        locationWhenInUseStatus.isPermanentlyDenied) {
       // User has permanently denied permission, need to open app settings
       return false;
     }
 
-    if (status.isDenied) {
+    if (locationStatus.isDenied) {
       final result = await Permission.location.request();
       return result.isGranted;
     }
+    if (locationAlwaysStatus.isDenied) {
+      final result = await Permission.locationAlways.request();
+      return result.isGranted;
+    }
+    if (locationWhenInUseStatus.isDenied) {
+      final result = await Permission.locationWhenInUse.request();
+      return result.isGranted;
+    }
 
-    return status.isGranted;
+    return locationStatus.isGranted &&
+        locationAlwaysStatus.isGranted &&
+        locationWhenInUseStatus.isGranted;
   }
 
   /// Checks current location permission status
   Future<bool> get hasLocationPermission async {
-    return await Permission.location.isGranted;
+    final location = await Permission.location.isGranted;
+    final locationAlways = await Permission.locationAlways.isGranted;
+    final locationWhenInUse = await Permission.locationWhenInUse.isGranted;
+    return location && locationAlways && locationWhenInUse;
   }
 
   /// Checks if location services are enabled (Android/iOS)
   /// Note: This requires additional platform-specific implementation
   Future<bool> get areLocationServicesEnabled async {
     return await Permission.location.serviceStatus.isEnabled;
-  }
-
-  /// Requests both coarse and fine location permissions
-  Future<bool> requestPreciseLocationPermission() async {
-    final status = await Permission.locationWhenInUse.request();
-    return status.isGranted;
-  }
-
-  /// Checks if app has precise location permission
-  Future<bool> get hasPreciseLocationPermission async {
-    return await Permission.locationWhenInUse.isGranted;
   }
 }

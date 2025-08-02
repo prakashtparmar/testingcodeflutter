@@ -26,10 +26,20 @@ class LocationUtils {
   }
 
   static Future<bool> isValidLocation(Position position) async {
-    if (position.accuracy > 100) return false;
-    if (DateTime.now().difference(position.timestamp) > Duration(minutes: 5)) {
+    // Reject locations with accuracy worse than 50 meters
+    if (position.accuracy > 50) return false;
+
+    // Reject locations older than 2 minutes
+    if (DateTime.now().difference(position.timestamp) > Duration(minutes: 2)) {
       return false;
     }
+
+    // Additional checks for real devices
+    if (position.speed > 0) {
+      // If speed is available, use it to validate
+      return position.speed < 50; // Reject if speed > 180 km/h (likely error)
+    }
+
     return true;
   }
 
@@ -38,7 +48,6 @@ class LocationUtils {
   }
 
   static bool isLocationFresh(Position position) {
-    return position.timestamp != null &&
-        DateTime.now().difference(position.timestamp!) < Duration(minutes: 5);
+    return DateTime.now().difference(position.timestamp) < Duration(minutes: 5);
   }
 }

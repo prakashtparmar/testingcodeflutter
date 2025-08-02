@@ -141,14 +141,15 @@ class NewLocationService {
       accuracy:
           _isInBackground
               ? LocationAccuracy
-                  .lowest // Android background
+                  .bestForNavigation // Android background
               : LocationAccuracy.best, // Android foreground
 
-      distanceFilter: 10, // Meters
+      distanceFilter: 30, // Meters
       forceLocationManager: false, // Use FusedLocationProvider by default
-      intervalDuration: const Duration(
-        seconds: 15,
-      ), // Minimum time between updates
+      intervalDuration:
+          _isInBackground
+              ? const Duration(seconds: 60) // Less frequent in background
+              : const Duration(seconds: 15), // Minimum time between updates
       foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationText: "Tracking your location",
         notificationTitle: "Location Service Active",
