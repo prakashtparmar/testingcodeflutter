@@ -53,7 +53,10 @@ class PermissionUtil {
       // User has permanently denied permission, need to open app settings
       return false;
     }
-
+    if (locationWhenInUseStatus.isDenied) {
+      final result = await Permission.locationWhenInUse.request();
+      return result.isGranted;
+    }
     if (locationStatus.isDenied) {
       final result = await Permission.location.request();
       return result.isGranted;
@@ -62,11 +65,6 @@ class PermissionUtil {
       final result = await Permission.locationAlways.request();
       return result.isGranted;
     }
-    if (locationWhenInUseStatus.isDenied) {
-      final result = await Permission.locationWhenInUse.request();
-      return result.isGranted;
-    }
-
     return locationStatus.isGranted &&
         locationAlwaysStatus.isGranted &&
         locationWhenInUseStatus.isGranted;
@@ -77,12 +75,9 @@ class PermissionUtil {
     final location = await Permission.location.isGranted;
     final locationAlways = await Permission.locationAlways.isGranted;
     final locationWhenInUse = await Permission.locationWhenInUse.isGranted;
+    final locationServiceEnabled =
+        await Permission.location.serviceStatus.isEnabled;
+    if (!locationServiceEnabled) return false;
     return location && locationAlways && locationWhenInUse;
-  }
-
-  /// Checks if location services are enabled (Android/iOS)
-  /// Note: This requires additional platform-specific implementation
-  Future<bool> get areLocationServicesEnabled async {
-    return await Permission.location.serviceStatus.isEnabled;
   }
 }

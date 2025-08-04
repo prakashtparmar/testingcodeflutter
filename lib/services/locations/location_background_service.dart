@@ -24,14 +24,14 @@ class LocationBackgroundService {
 
     await Workmanager().initialize(
       _backgroundTaskCallback,
-      isInDebugMode: true,
+      isInDebugMode: false,
     );
 
     final service = FlutterBackgroundService();
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: _onBackgroundServiceStart,
-        autoStart: false,
+        autoStart: true,
         isForegroundMode: true,
         notificationChannelId: 'location_tracker',
         initialNotificationTitle: 'Location Tracking',
