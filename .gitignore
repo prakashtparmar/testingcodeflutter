@@ -158,4 +158,4 @@ app.*.symbols
 .gclient_entries
 .python-version
 .gclient_previous_custom_vars
-.gclient_previous_sync_commits
+.gclient_previous_sync_commits\.idea\.wiseGPT\

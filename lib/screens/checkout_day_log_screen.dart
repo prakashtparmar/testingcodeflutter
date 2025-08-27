@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
 import 'package:snap_check/models/day_log_detail_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
+import 'package:snap_check/screens/camera/back_only_camera_screen.dart';
 import 'package:snap_check/services/locations/new_location_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 
@@ -45,10 +47,8 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
 
   Future<void> _captureImage() async {
     try {
-      final picked = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-        maxWidth: 1024,
+      final picked = await Navigator.of(context).push<XFile?>(
+        MaterialPageRoute(builder: (_) => const BackOnlyCameraScreen()),
       );
       if (picked != null) {
         setState(() => _imageFile = picked);

@@ -14,6 +14,7 @@ import 'location_background_service.dart';
 import 'location_api_service.dart';
 import 'location_utils.dart';
 import 'location_permission_service.dart';
+import 'package:snap_check/services/service.dart';
 
 enum GpsStatus {
   disabled(0),
@@ -133,7 +134,27 @@ class NewLocationService {
     if (!await _permissionService.isLocationEnabled()) return false;
     if (!await _permissionService.checkAndRequestPermissions()) return false;
 
+    // Prompt user to disable battery optimizations for reliable background tracking.
+    // Non-blocking: we just nudge the settings UI.
+    try {
+      final isIgnoring = await Service.isIgnoringBatteryOptimizations();
+      if (!isIgnoring) {
+        await Service.requestIgnoreBatteryOptimizations();
+      }
+    } catch (_) {}
+
     _isTracking = true;
+
+    // Ensure Android foreground background-service is running so tracking
+    // continues even if the app is killed from recents.
+    if (Platform.isAndroid) {
+      try {
+        final service = FlutterBackgroundService();
+        if (!await service.isRunning()) {
+          await service.startService();
+        }
+      } catch (_) {}
+    }
     await _syncStoredLocations();
 
     _positionStream?.cancel();
@@ -250,7 +271,7 @@ class NewLocationService {
 
     final batteryLevel = await _battery.batteryLevel;
     final locationPayload = {
-      "tripId": _currentDayLogId!,
+      "tripId": int.tryParse(_currentDayLogId!),
       "latitude": latitude,
       "longitude": longitude,
       "gps_status": "${GpsStatus.enabled.value}",

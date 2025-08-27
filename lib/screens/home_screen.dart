@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart' show Fluttertoast, Toast, ToastGravity;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:snap_check/constants/constants.dart';
 import 'package:snap_check/models/active_day_log_data_model.dart';
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Check and request notification permission
     if (await permissionHandler.isNotificationPermissionRequired) {
       final hasPermission =
-          await permissionHandler.requestNotificationPermission();
+      await permissionHandler.requestNotificationPermission();
       if (!hasPermission) {
         // Handle permission denial
         debugPrint('Notification permission denied');
@@ -97,9 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleActiveDayLogFound(
-    ActiveDayLogResponseModel response,
-    String tokenData,
-  ) async {
+      ActiveDayLogResponseModel response,
+      String tokenData,
+      ) async {
     final dayLogId = response.data!.id.toString();
     await SharedPrefHelper.saveActiveDayLogId(dayLogId);
     SharedPrefHelper.setTrackingActive(true);
@@ -180,10 +181,18 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context)
         .pushNamed('/checkoutDayLog', arguments: _activeDayLogDataModel)
         .then((flag) {
-          if (flag == true) {
-            _fetchActiveDayLog();
-          }
-        });
+      if (flag == true) {
+        _fetchActiveDayLog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('DAY END SUCCESSFULLY'),
+            duration: Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height / 2 - 30),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -248,9 +257,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Using shrinkWrap and setting the GridView to take only available space
                     GridView.count(
                       shrinkWrap:
-                          true, // Ensures the GridView only takes as much space as it needs
+                      true, // Ensures the GridView only takes as much space as it needs
                       physics:
-                          NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
+                      NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
@@ -275,8 +284,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildGridItem(
                           context,
                           icon:
-                              AppAssets
-                                  .budgetPlan, // Make sure to add this asset
+                          AppAssets
+                              .budgetPlan, // Make sure to add this asset
                           title: "Budget Plan",
                           onTap: () {
                             _navigationRoutes(context, "/budgetPlan", false);
@@ -285,8 +294,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildGridItem(
                           context,
                           icon:
-                              AppAssets
-                                  .monthlyPlan, // Make sure to add this asset
+                          AppAssets
+                              .monthlyPlan, // Make sure to add this asset
                           title: "Monthly Plan",
                           onTap: () {
                             _navigationRoutes(context, "/monthlyPlan", false);
@@ -295,8 +304,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildGridItem(
                           context,
                           icon:
-                              AppAssets
-                                  .paymentCollection, // Make sure to add this asset
+                          AppAssets
+                              .paymentCollection, // Make sure to add this asset
                           title: "Payment Collection",
                           onTap: () {
                             _navigationRoutes(
@@ -317,8 +326,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildGridItem(
                           context,
                           icon:
-                              AppAssets
-                                  .partyVisit, // Make sure to add this asset
+                          AppAssets
+                              .partyVisit, // Make sure to add this asset
                           title: "Party Visit",
                           onTap: () {
                             _navigationRoutes(context, "/partyVisit", false);
@@ -327,8 +336,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildGridItem(
                           context,
                           icon:
-                              AppAssets
-                                  .partyStatement, // Make sure to add this asset
+                          AppAssets
+                              .partyStatement, // Make sure to add this asset
                           title: "Party Statement",
                           onTap: () {
                             _navigationRoutes(
@@ -377,7 +386,29 @@ class _HomeScreenState extends State<HomeScreen> {
   // Function to show SnackBar
   void _navigationRoutes(BuildContext context, String routeName, bool isExit) {
     if (isExit) {
-      Navigator.pushNamed(context, routeName);
+      Navigator.pushNamed(context, routeName).then((result) {
+        if (routeName == '/starTrip' && result == true) {
+          Fluttertoast.showToast(
+              msg: "DAY START SUCCESSFULLY",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.TOP,
+              timeInSecForIosWeb: 15,
+              backgroundColor: Colors.green,
+              textColor: Colors.white,
+              fontSize: 14.0
+          );
+        } else if (routeName == '/checkoutDayLog' && result == true) {
+          Fluttertoast.showToast(
+              msg: "DAY END SUCCESSFULLY",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.TOP,
+              timeInSecForIosWeb: 5,
+              backgroundColor: Colors.green,
+              textColor: Colors.white,
+              fontSize: 14.0
+          );
+        }
+      });
     } else {
       ScaffoldMessenger.of(
         context,

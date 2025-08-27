@@ -26,6 +26,23 @@ class LocationBackgroundService {
       _backgroundTaskCallback,
       isInDebugMode: false,
     );
+    // Also schedule a periodic fallback task in case the foreground service
+    // is killed by the system; this will still capture a snapshot and queue it
+    // to the local DB, then try to sync when network is available.
+    try {
+      await Workmanager().registerPeriodicTask(
+        '$_backgroundTaskName-periodic',
+        _backgroundTaskName,
+        frequency: const Duration(minutes: 15),
+        initialDelay: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.not_required,
+        ),
+        existingWorkPolicy: ExistingWorkPolicy.keep,
+        backoffPolicy: BackoffPolicy.linear,
+        backoffPolicyDelay: const Duration(minutes: 5),
+      );
+    } catch (_) {}
 
     final service = FlutterBackgroundService();
     await service.configure(
@@ -78,7 +95,16 @@ class LocationBackgroundService {
             "${GpsStatus.enabled.value}",
             apiFormat.format(DateTime.now()),
           );
-          return response?.success ?? false;
+          if (response?.success == true) {
+            try {
+              final lastId = await dbService.getLastInsertId();
+              if (lastId != null) {
+                await dbService.markLocationsAsSynced([lastId]);
+              }
+            } catch (_) {}
+            return true;
+          }
+          return false;
         }
 
         return true;
@@ -208,7 +234,7 @@ class LocationBackgroundService {
       });
       // Try to send to API if connected
       if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
-        await LocationApiService().sendLocation(
+        final resp = await LocationApiService().sendLocation(
           token,
           dayLogId,
           position.latitude,
@@ -217,6 +243,14 @@ class LocationBackgroundService {
           "${GpsStatus.enabled.value}",
           apiFormat.format(DateTime.now()),
         );
+        if (resp?.success == true) {
+          try {
+            final lastId = await dbService.getLastInsertId();
+            if (lastId != null) {
+              await dbService.markLocationsAsSynced([lastId]);
+            }
+          } catch (_) {}
+        }
       }
     } catch (e) {
       service.stopSelf();

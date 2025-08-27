@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -64,6 +65,13 @@ class MainActivity : FlutterActivity() {
                 }
                 "openBatteryOptimizationSettings" -> {
                     openBatteryOptimizationSettings()
+                    result.success(null)
+                }
+                "isIgnoringBatteryOptimizations" -> {
+                    result.success(isIgnoringBatteryOptimizations())
+                }
+                "requestIgnoreBatteryOptimizations" -> {
+                    requestIgnoreBatteryOptimizations()
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -149,6 +157,34 @@ class MainActivity : FlutterActivity() {
                 startActivity(intent)
             } catch (e: Exception) {
                 Log.e(TAG, "Error opening battery optimization settings", e)
+            }
+        }
+    }
+
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                pm.isIgnoringBatteryOptimizations(packageName)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking battery optimization status", e)
+                false
+            }
+        } else {
+            true
+        }
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                intent.data = android.net.Uri.parse("package:$packageName")
+                startActivity(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error requesting ignore battery optimizations", e)
+                // Fallback: open general settings
+                openBatteryOptimizationSettings()
             }
         }
     }

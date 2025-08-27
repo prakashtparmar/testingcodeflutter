@@ -1,6 +1,10 @@
-class Service {
-  final String baseUrl = 'http://192.168.1.4:8000/api';
+import 'package:flutter/services.dart';
 
+class Service {
+
+  final String baseUrl = 'http://trackag.in/admin/login';
+  // final String baseUrl = 'http://43.204.216.121:8000/api';
+  // final String baseUrl = 'http://3.7.254.144:8000/api';
   late final String apiLogin,
       apiRegister,
       apiResetPassword,
@@ -43,5 +47,29 @@ class Service {
     apiActiveDayLog = "$baseUrl/trip/active"; // Proper URL concatenation
     apiTripDetail = "$baseUrl/trip/ID/detail"; // Proper URL concatenation
     apiFailedJob = "$baseUrl/failedJobs"; // Proper URL concatenation
+  }
+
+  // Battery optimization integration
+  static const MethodChannel _batteryChannel = MethodChannel('location_tracker');
+
+  static Future<void> openBatteryOptimizationSettings() async {
+    try {
+      await _batteryChannel.invokeMethod('openBatteryOptimizationSettings');
+    } catch (_) {}
+  }
+
+  static Future<bool> isIgnoringBatteryOptimizations() async {
+    try {
+      final result = await _batteryChannel.invokeMethod('isIgnoringBatteryOptimizations');
+      return (result == true);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> requestIgnoreBatteryOptimizations() async {
+    try {
+      await _batteryChannel.invokeMethod('requestIgnoreBatteryOptimizations');
+    } catch (_) {}
   }
 }

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:snap_check/models/party_users_data_model.dart';
@@ -15,6 +14,7 @@ import 'package:snap_check/services/share_pref.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:snap_check/screens/camera/back_only_camera_screen.dart';
 
 class StartTripScreen extends StatefulWidget {
   const StartTripScreen({super.key});
@@ -48,6 +48,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
   XFile? imageFile;
   Position? currentPosition;
   bool _isLoading = false;
+  bool _isSubmitting = false; // New loading state for submit button
 
   final _formKey = GlobalKey<FormState>();
   @override
@@ -174,10 +175,12 @@ class _StartTripScreenState extends State<StartTripScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      setState(() => imageFile = picked);
+    // Open custom back-only camera, with visible but disabled switch
+    final result = await Navigator.of(context).push<XFile?>(
+      MaterialPageRoute(builder: (_) => const BackOnlyCameraScreen()),
+    );
+    if (result != null) {
+      setState(() => imageFile = result);
     }
   }
 
@@ -250,6 +253,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
     }
     setState(() {
       _isLoading = true;
+      _isSubmitting = true; // Set submitting state for button
     });
     // Base form data
     try {
@@ -274,6 +278,9 @@ class _StartTripScreenState extends State<StartTripScreen> {
         }
       }
       if (imageFile == null) {
+        setState(() {
+          _isSubmitting = false; // Reset submitting state
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("File not found: ${imageFile!.path}")),
         );
@@ -286,6 +293,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
           .postDayLog(tokenData!, compressedXFile, formData);
       setState(() {
         _isLoading = false;
+        // Keep _isSubmitting true until background process starts
       });
       if (postDayLogsResponseModel != null &&
           postDayLogsResponseModel.success == true) {
@@ -316,10 +324,15 @@ class _StartTripScreenState extends State<StartTripScreen> {
         final locationService = NewLocationService();
 
         // Start tracking
+        bool backgroundStarted = false;
         if (locationService.isTracking) {
           debugPrint(
             "locationService.isTracking ${locationService.isTracking}",
           );
+          backgroundStarted = true;
+          setState(() {
+            _isSubmitting = false;
+          });
         } else {
           await SharedPrefHelper.saveActiveDayLogId(
             postDayLogsResponseModel.data!.id.toString(),
@@ -328,19 +341,28 @@ class _StartTripScreenState extends State<StartTripScreen> {
             token: tokenData,
             dayLogId: "${postDayLogsResponseModel.data!.id}",
           );
+          backgroundStarted = success;
           if (success) {
             debugPrint('Location tracking started successfully');
           } else {
             debugPrint('Failed to start tracking - check permissions');
           }
+          setState(() {
+            _isSubmitting = false;
+          });
         }
 
-        Navigator.pop(context, true); // Sends 'true' back to the caller
+        // Only report success to caller if background actually started
+        Navigator.pop(context, backgroundStarted);
       } else if (postDayLogsResponseModel != null &&
           postDayLogsResponseModel.success == false) {
         if (!mounted) {
           return;
         }
+        // API call failed, remove loading from button
+        setState(() {
+          _isSubmitting = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(postDayLogsResponseModel.message!)),
         );
@@ -348,6 +370,7 @@ class _StartTripScreenState extends State<StartTripScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _isSubmitting = false; // Reset submitting state on error
       });
       debugPrint("_submitForm ${e.toString()}");
       ScaffoldMessenger.of(
@@ -656,8 +679,32 @@ class _StartTripScreenState extends State<StartTripScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submitForm,
-                        child: const Text('Submit & Start'),
+                        onPressed: _isSubmitting ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child:
+                            _isSubmitting
+                                ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Please Wait'),
+                                    const SizedBox(width: 10),
+                                    const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                                : const Text('Submit & Start'),
                       ),
                     ),
                   ],

@@ -215,8 +215,10 @@ class BasicService extends Service {
   }
 
   Future<ActiveDayLogResponseModel?> getActiveDayLog(String token) async {
+    final uri = Uri.parse(apiActiveDayLog);
+    debugPrint('[HTTP] GET: '+uri.toString());
     final response = await http.get(
-      Uri.parse(apiActiveDayLog),
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

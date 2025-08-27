@@ -5,6 +5,8 @@
 		<key>NSCameraUsageDescription</key>
 		<string>We need access to your camera to capture the vehicle meter&apos;s mileage for
 			tracking purposes.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app does not use microphone access.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>We need access to your location to capture the vehicle meter&apos;s mileage for
 			tracking purposes.</string>
