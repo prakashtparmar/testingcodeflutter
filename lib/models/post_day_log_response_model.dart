@@ -7,13 +7,12 @@ class PostDayLogsResponseModel {
 
   PostDayLogsResponseModel({this.success, this.data, this.message});
 
-  PostDayLogsResponseModel.fromJson(Map<String, dynamic> json) {
-    success = json['success'];
-    data =
-        json['data'] != null
-            ? PostDayLogDataModel.fromJson(json['data'])
-            : null;
-    message = json['message'];
+  factory PostDayLogsResponseModel.fromJson(Map<String, dynamic> json) {
+    return PostDayLogsResponseModel(
+      success: json['success'] == true,
+      message: json['message'] as String?,
+      data: json['data'] != null ? PostDayLogDataModel.fromJson(json['data']) : null,
+    );
   }
 
   Map<String, dynamic> toJson() {

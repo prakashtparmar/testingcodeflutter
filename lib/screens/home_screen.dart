@@ -1,5 +1,4 @@
-import 'dart:math';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart' show Fluttertoast, Toast, ToastGravity;
 import 'package:permission_handler/permission_handler.dart';
@@ -183,14 +182,28 @@ class _HomeScreenState extends State<HomeScreen> {
         .then((flag) {
       if (flag == true) {
         _fetchActiveDayLog();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('DAY END SUCCESSFULLY'),
-            duration: Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height / 2 - 30),
-          ),
-        );
+        showLongToast('DAY END SUCCESSFULLY');
+      }
+    });
+  }
+
+  void showLongToast(String message) {
+    int repeatCount = 5;
+    int count = 0;
+
+    Timer.periodic(const Duration(seconds: 3), (timer) {
+      Fluttertoast.showToast(
+        msg: message,
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
+
+      count++;
+      if (count >= repeatCount) {
+        timer.cancel();
       }
     });
   }
@@ -263,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 1, // Equal size for each grid item
+                      childAspectRatio: 1/1.1, // Equal size for each grid item
                       children: [
                         _buildGridItem(
                           context,
@@ -388,25 +401,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (isExit) {
       Navigator.pushNamed(context, routeName).then((result) {
         if (routeName == '/starTrip' && result == true) {
-          Fluttertoast.showToast(
-              msg: "DAY START SUCCESSFULLY",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.TOP,
-              timeInSecForIosWeb: 15,
-              backgroundColor: Colors.green,
-              textColor: Colors.white,
-              fontSize: 14.0
-          );
+          showLongToast('Please wait we initialize the service');
         } else if (routeName == '/checkoutDayLog' && result == true) {
-          Fluttertoast.showToast(
-              msg: "DAY END SUCCESSFULLY",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.TOP,
-              timeInSecForIosWeb: 5,
-              backgroundColor: Colors.green,
-              textColor: Colors.white,
-              fontSize: 14.0
-          );
+          showLongToast('DAY END SUCCESSFULLY');
         }
       });
     } else {
@@ -436,12 +433,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(icon, width: 50, height: 50),
-              const SizedBox(height: 4),
+              Image.asset(icon, width: 45, height: 45),
+              const SizedBox(height: 2),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall,
                 textAlign: TextAlign.center,
+                // overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

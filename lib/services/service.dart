@@ -1,8 +1,7 @@
 import 'package:flutter/services.dart';
 
 class Service {
-
-  final String baseUrl = 'http://trackag.in/admin/login';
+  final String baseUrl = 'http://trackag.in/api';
   // final String baseUrl = 'http://43.204.216.121:8000/api';
   // final String baseUrl = 'http://3.7.254.144:8000/api';
   late final String apiLogin,

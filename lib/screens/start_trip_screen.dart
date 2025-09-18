@@ -648,33 +648,33 @@ class _StartTripScreenState extends State<StartTripScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Show Google Map preview with marker if currentPosition is not null
-                    if (currentPosition != null)
-                      SizedBox(
-                        height: 200,
-                        child: GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: LatLng(
-                              currentPosition!.latitude,
-                              currentPosition!.longitude,
-                            ),
-                            zoom: 15,
-                          ),
-                          markers: {
-                            Marker(
-                              markerId: const MarkerId('currentLocation'),
-                              position: LatLng(
-                                currentPosition!.latitude,
-                                currentPosition!.longitude,
-                              ),
-                            ),
-                          },
-                          onMapCreated: (controller) {},
-                          myLocationEnabled: true,
-                          myLocationButtonEnabled: true,
-                          zoomControlsEnabled: false,
-                        ),
-                      ),
+                    // // Show Google Map preview with marker if currentPosition is not null
+                    // if (currentPosition != null)
+                    //   SizedBox(
+                    //     height: 200,
+                    //     child: GoogleMap(
+                    //       initialCameraPosition: CameraPosition(
+                    //         target: LatLng(
+                    //           currentPosition!.latitude,
+                    //           currentPosition!.longitude,
+                    //         ),
+                    //         zoom: 15,
+                    //       ),
+                    //       markers: {
+                    //         Marker(
+                    //           markerId: const MarkerId('currentLocation'),
+                    //           position: LatLng(
+                    //             currentPosition!.latitude,
+                    //             currentPosition!.longitude,
+                    //           ),
+                    //         ),
+                    //       },
+                    //       onMapCreated: (controller) {},
+                    //       myLocationEnabled: true,
+                    //       myLocationButtonEnabled: true,
+                    //       zoomControlsEnabled: false,
+                    //     ),
+                    //   ),
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,

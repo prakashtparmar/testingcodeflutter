@@ -1,9 +1,7 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -186,8 +184,9 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         _imageFile,
         formData,
       );
-
+      print('response?.success --> ${response?.success}');
       if (response?.success == true) {
+        print('response?.success --> ${response?.success}');
         SharedPrefHelper.setTrackingActive(false);
         SharedPrefHelper.clearActiveDayLog();
         final locationService = NewLocationService();
@@ -424,32 +423,32 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                   ),
 
                   const SizedBox(height: 12),
-                  if (currentPosition != null)
-                    SizedBox(
-                      height: 200,
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: LatLng(
-                            currentPosition!.latitude,
-                            currentPosition!.longitude,
-                          ),
-                          zoom: 15,
-                        ),
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('currentLocation'),
-                            position: LatLng(
-                              currentPosition!.latitude,
-                              currentPosition!.longitude,
-                            ),
-                          ),
-                        },
-                        onMapCreated: (controller) {},
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
-                        zoomControlsEnabled: false,
-                      ),
-                    ),
+                  // if (currentPosition != null)
+                  //   SizedBox(
+                  //     height: 200,
+                  //     child: GoogleMap(
+                  //       initialCameraPosition: CameraPosition(
+                  //         target: LatLng(
+                  //           currentPosition!.latitude,
+                  //           currentPosition!.longitude,
+                  //         ),
+                  //         zoom: 15,
+                  //       ),
+                  //       markers: {
+                  //         Marker(
+                  //           markerId: const MarkerId('currentLocation'),
+                  //           position: LatLng(
+                  //             currentPosition!.latitude,
+                  //             currentPosition!.longitude,
+                  //           ),
+                  //         ),
+                  //       },
+                  //       onMapCreated: (controller) {},
+                  //       myLocationEnabled: true,
+                  //       myLocationButtonEnabled: true,
+                  //       zoomControlsEnabled: false,
+                  //     ),
+                  //   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed:

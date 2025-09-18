@@ -12,7 +12,7 @@ import 'package:snap_check/services/share_pref.dart';
 const double _zoomLevel = 17;
 const double _tilt = 45;
 const double _bearing = 0;
-const Duration _locationSendInterval = Duration(seconds: 30);
+const Duration _locationSendInterval = Duration(minutes: 1);
 const int _minLocationsForSend = 5;
 const double _significantDistance = 10; // meters
 

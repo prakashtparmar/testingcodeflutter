@@ -3,7 +3,6 @@ import 'package:snap_check/models/leaves_data_model.dart';
 import 'package:snap_check/services/basic_service.dart';
 import 'package:snap_check/services/share_pref.dart';
 import 'package:readmore/readmore.dart';
-import 'package:snap_check/theme/theme_provider.dart';
 
 class LeavesListScreen extends StatefulWidget {
   const LeavesListScreen({super.key});
