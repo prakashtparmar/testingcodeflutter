@@ -146,14 +146,18 @@ class BasicService extends Service {
     Map<String, String> fields,
   ) async {
     final uri = Uri.parse(apiDayLogCloseDayLog);
+    print('uri --> $uri');
     final request = http.MultipartRequest('POST', uri);
     // Set headers (note: Content-Type will be set automatically)
     request.headers.addAll({"Accept": "application/json"});
     request.headers.addAll({"Authorization": "Bearer $token"});
     // Add text fields (like date, place, km, etc.)
+    print('token --> $token');
+    print('imageFile --> $imageFile');
     request.fields.addAll(fields);
     // Add image file (optional)
     if (imageFile != null) {
+      print('imageFile --> ${basename(imageFile.path)}');
       request.files.add(
         await http.MultipartFile.fromPath(
           'end_km_photo', // key expected by your backend
@@ -166,6 +170,7 @@ class BasicService extends Service {
     final response = await request.send();
     final responseFormat = await response.stream.bytesToString();
 
+    print('responseFormat --> ${jsonDecode(responseFormat)}');
     return PostDayLogsResponseModel.fromJson(jsonDecode(responseFormat));
   }
 

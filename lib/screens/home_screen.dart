@@ -45,22 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // Initialize background service
     // Check and request notification permission
     if (await permissionHandler.isNotificationPermissionRequired) {
-      final hasPermission =
-      await permissionHandler.requestNotificationPermission();
+      final hasPermission = await permissionHandler.requestNotificationPermission();
       if (!hasPermission) {
         // Handle permission denial
         debugPrint('Notification permission denied');
         // Optionally show user guidance
-      }
-    }
-    final hasLocationPermission = await permissionHandler.hasLocationPermission;
-    if (!hasLocationPermission) {
-      bool granted = await permissionHandler.requestLocationPermission();
-      if (!granted) {
-        openAppSettings();
-        debugPrint("User denied location permission");
-      } else {
-        debugPrint("Location permission granted");
       }
     }
   }
@@ -96,10 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _handleActiveDayLogFound(
-      ActiveDayLogResponseModel response,
-      String tokenData,
-      ) async {
+  Future<void> _handleActiveDayLogFound(ActiveDayLogResponseModel response, String tokenData) async {
     final dayLogId = response.data!.id.toString();
     await SharedPrefHelper.saveActiveDayLogId(dayLogId);
     SharedPrefHelper.setTrackingActive(true);
@@ -114,10 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint("Tracking already active");
     } else {
       debugPrint("Starting location tracking...");
-      final started = await locationService.startTracking(
-        token: tokenData,
-        dayLogId: dayLogId,
-      );
+      final started = await locationService.startTracking(token: tokenData, dayLogId: dayLogId);
       debugPrint("Tracking started: $started");
 
       if (!started) {
@@ -177,9 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _redirectToCheckout() {
-    Navigator.of(context)
-        .pushNamed('/checkoutDayLog', arguments: _activeDayLogDataModel)
-        .then((flag) {
+    Navigator.of(context).pushNamed('/checkoutDayLog', arguments: _activeDayLogDataModel).then((flag) {
       if (flag == true) {
         _fetchActiveDayLog();
         showLongToast('DAY END SUCCESSFULLY');
@@ -220,10 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
                 },
               ),
             ],
@@ -233,10 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: SingleChildScrollView(
               // Wrap the Column in SingleChildScrollView
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -256,8 +231,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? "Check In / Start Day Log"
                               : "Stop Tracking",
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           if (_activeDayLogDataModel == null) {
+                            final hasLocationPermission = await permissionHandler.hasLocationPermission;
+                            print('hasLocationPermission --> ${hasLocationPermission}');
+                            if (!hasLocationPermission) {
+                              bool granted = await permissionHandler.requestLocationPermission();
+                              if (!granted) {
+                                openAppSettings();
+                                debugPrint("User denied location permission");
+                              } else {
+                                debugPrint("Location permission granted");
+                              }
+                            }
                             _navigationRoutes(context, "/starTrip", true);
                           } else {
                             _redirectToCheckout();
@@ -269,14 +255,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     // Using shrinkWrap and setting the GridView to take only available space
                     GridView.count(
-                      shrinkWrap:
-                      true, // Ensures the GridView only takes as much space as it needs
-                      physics:
-                      NeverScrollableScrollPhysics(), // Disables scrolling in the GridView
+                      shrinkWrap: true,
+                      // Ensures the GridView only takes as much space as it needs
+                      physics: NeverScrollableScrollPhysics(),
+                      // Disables scrolling in the GridView
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 1/1.1, // Equal size for each grid item
+                      childAspectRatio: 1 / 1.1,
+                      // Equal size for each grid item
                       children: [
                         _buildGridItem(
                           context,
@@ -296,9 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         _buildGridItem(
                           context,
-                          icon:
-                          AppAssets
-                              .budgetPlan, // Make sure to add this asset
+                          icon: AppAssets.budgetPlan, // Make sure to add this asset
                           title: "Budget Plan",
                           onTap: () {
                             _navigationRoutes(context, "/budgetPlan", false);
@@ -306,9 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         _buildGridItem(
                           context,
-                          icon:
-                          AppAssets
-                              .monthlyPlan, // Make sure to add this asset
+                          icon: AppAssets.monthlyPlan, // Make sure to add this asset
                           title: "Monthly Plan",
                           onTap: () {
                             _navigationRoutes(context, "/monthlyPlan", false);
@@ -316,16 +299,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         _buildGridItem(
                           context,
-                          icon:
-                          AppAssets
-                              .paymentCollection, // Make sure to add this asset
+                          icon: AppAssets.paymentCollection, // Make sure to add this asset
                           title: "Payment Collection",
                           onTap: () {
-                            _navigationRoutes(
-                              context,
-                              "/paymentCollection",
-                              false,
-                            );
+                            _navigationRoutes(context, "/paymentCollection", false);
                           },
                         ),
                         _buildGridItem(
@@ -338,9 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         _buildGridItem(
                           context,
-                          icon:
-                          AppAssets
-                              .partyVisit, // Make sure to add this asset
+                          icon: AppAssets.partyVisit, // Make sure to add this asset
                           title: "Party Visit",
                           onTap: () {
                             _navigationRoutes(context, "/partyVisit", false);
@@ -348,24 +323,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         _buildGridItem(
                           context,
-                          icon:
-                          AppAssets
-                              .partyStatement, // Make sure to add this asset
+                          icon: AppAssets.partyStatement, // Make sure to add this asset
                           title: "Party Statement",
                           onTap: () {
-                            _navigationRoutes(
-                              context,
-                              "/partyStatement",
-                              false,
-                            );
+                            _navigationRoutes(context, "/partyStatement", false);
                           },
                         ),
 
                         _buildGridItem(
                           context,
-                          icon:
-                              AppAssets
-                                  .dayReport, // Make sure to add this asset
+                          icon: AppAssets.dayReport, // Make sure to add this asset
                           title: "Day Report",
                           onTap: () {
                             _navigationRoutes(context, "/dayReport", false);
@@ -407,9 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Coming soon!")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Coming soon!")));
     }
   }
 
@@ -426,10 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         child: Container(
           // padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            color: Theme.of(context).cardColor,
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: Theme.of(context).cardColor),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

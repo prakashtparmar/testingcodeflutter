@@ -277,7 +277,7 @@ class UserModel {
   int? tehsilId;
   String? latitude;
   String? longitude;
-  String? pincodeId;
+  dynamic pincodeId;
   int? companyId;
   String? userLevel;
   String? depo;

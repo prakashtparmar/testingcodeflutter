@@ -179,6 +179,7 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
         "end_lng": currentPosition!.longitude.toString(),
       };
 
+      print('formData --> $formData');
       final response = await BasicService().postCloseDay(
         tokenData!,
         _imageFile,
@@ -356,7 +357,6 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                         (val) =>
                             val == null || val.isEmpty ? 'Enter Notes' : null,
                   ),
-
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: _captureImage,
@@ -421,8 +421,6 @@ class _CheckoutDayLogScreenState extends State<CheckoutDayLogScreen> {
                               ),
                     ),
                   ),
-
-                  const SizedBox(height: 12),
                   // if (currentPosition != null)
                   //   SizedBox(
                   //     height: 200,

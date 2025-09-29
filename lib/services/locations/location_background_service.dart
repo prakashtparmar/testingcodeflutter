@@ -68,7 +68,6 @@ class LocationBackgroundService {
         // Initialize database
         final dbService = LocationDatabaseService();
         await dbService.initDatabase();
-
         // Store in database
         await dbService.saveLocation({
           'tripId': int.tryParse(dayLogId),
@@ -195,11 +194,11 @@ class LocationBackgroundService {
     double? lastLat;
     double? lastLng;
 
-    // Start location stream with 100-meter movement filter
+    // Start location stream with 300-meter movement filter
     Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 100, // 100 meters movement filter
+        distanceFilter: 300, // 100 meters movement filter
       ),
     ).listen((Position position) async {
       if (!await SharedPrefHelper.isTrackingActive()) {
@@ -211,7 +210,7 @@ class LocationBackgroundService {
       if (service is AndroidServiceInstance) {
         service.setForegroundNotificationInfo(
           title: 'Hello, $name',
-          content: 'Tracking location...',
+          content: 'Day Started',
         );
       }
 
@@ -224,7 +223,7 @@ class LocationBackgroundService {
           position.longitude,
         );
 
-        if (distance < 100) return; // Ignore if not moved enough
+        if (distance < 300) return; // Ignore if not moved enough
       }
 
       lastLat = position.latitude;
